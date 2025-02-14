@@ -25,4 +25,8 @@ jobs:
       shell: pwsh
       run: |
 
-        echo ${{ github.server_url }}/${{ github.repository }}
+        Invoke-WebRequest -Uri "http://192.168.96.133:8080/job/XAVIER_DEMOS/job/GITFLOW_GFLC_CI/buildWithParameters?" `
+                            -Method POST `
+                            -ContentType "application/json"
+
+        
