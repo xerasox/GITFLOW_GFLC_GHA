@@ -1,0 +1,88 @@
+name: Code Pipeline Update Jira
+
+on:
+  repository_dispatch:
+    types: [cp-event]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  Update-Jira:
+    # The type of runner that the job will run on
+    runs-on: [ISPW]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Retrieve issue ID
+        id: get
+        shell: pwsh
+        run: |
+          $headers = @{
+              "Authorization" = "${{ secrets.CES_TOKEN }}"
+              "Content-Type" = "application/json"
+          }
+
+          # Make the GET request and parse the JSON response
+          $response = Invoke-WebRequest -Uri "${{ vars.CES_URL }}/ispw/${{ vars.CP_RUNTIME }}/assignments/${{ github.event.client_payload.assignment }}" `
+                                        -Method GET `
+                                        -Headers $headers
+
+          # Convert the response content to JSON and extract the description
+          $json = $response.Content | ConvertFrom-Json
+          $description = $json.description
+
+          # Split by '/' and get the last part
+          $issueKey = $description -split '/' | Select-Object -Last 1
+
+          echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
+
+      # Runs a set of commands using the runners shell
+      - name: Post Comment to Jira
+        id: post
+        shell: pwsh
+        run: |
+          $User = "${{ vars.JIRA_USER }}"
+          $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
+          $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+  
+          # Prepare the request body in JSON format
+          $body = @{
+              body = @{
+                  type = "doc"
+                  version = 1
+                  content = @(
+                      @{
+                            type = "paragraph"
+                            content = @(
+                                if ("${{vars.LANGUAGE}}" -eq "EN") {
+                                    @{
+                                        type = "text"
+                                        text = "Code Pipeline Information : On level ${{ github.event.client_payload.level }}, a ${{ github.event.client_payload.operation }} operation related to the assignment ${{ github.event.client_payload.assignment }} is ${{ github.event.client_payload.event }}."
+                                    }
+                                }
+                                else {
+                                    @{
+                                        type = "text"
+                                        text = "Information Code Pipeline : Depuis le level ${{ github.event.client_payload.level }}, une opération de type ${{ github.event.client_payload.operation }} associée à l'assignment ${{ github.event.client_payload.assignment }} s'est achevée avec le statut ${{ github.event.client_payload.event }}."
+                                    }
+                                }
+                            )
+                      }
+                  )
+              }
+          } | ConvertTo-Json -Depth 5 -Compress
+
+          # Display the JSON body for debugging purposes
+          Write-Host "Request body: $body"
+
+          # Send the POST request to Jira API
+          $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.get.outputs.ISSUE_KEY }}/comment' `
+              -Method POST `
+              -Headers @{
+                  'Accept' = 'application/json'
+                  'Authorization' = "Basic $EncodedAuth"
+              } `
+              -Body $body `
+              -ContentType 'application/json'
+

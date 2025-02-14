@@ -1,0 +1,172 @@
+<Connections>
+  <Connection>
+    <id>3733a884-8048-4e92-a5dc-22fee13c3d54</id>
+    <ipaddress>192.168.96.130</ipaddress>
+    <port>16196</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://192.168.96.130:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWCC - Demo System</description>
+    <label>CWCC - Demo System</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>d6a9b505-ae69-4e3c-91cf-65b2ed2af190</id>
+    <ipaddress>192.168.96.142</ipaddress>
+    <port>16196</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://192.168.96.142:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWC2 - Demo System</description>
+    <label>CWC2 - Demo System</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>7c1ad40b-cf1a-46a8-b0ff-3ea6ebad7579</id>
+    <ipaddress>http://cwcc.bmc.com</ipaddress>
+    <port>13120</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://http://cwcc.bmc.com:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>AA-Webhook-CWCC-BDCAS</description>
+    <label>AA-Webhook-CWCC-BDCAS</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>ab6d5206-db9c-431d-9923-04b38ed5a43b</id>
+    <ipaddress>http://cwcc.bmc.com</ipaddress>
+    <port>13121</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://http://cwcc.bmc.com:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>AA-Webhook-CWCC-TDCAS</description>
+    <label>AA-Webhook-CWCC-TDCAS</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>aa7c97de-cbb0-4d10-8423-b9e3a35fb52b</id>
+    <ipaddress>198.147.191.81</ipaddress>
+    <port>16198</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://192.168.96.130:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWCC - Test Drive Port</description>
+    <label>CWCC - Test Drive Port</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>9b70eb2d-1d9a-4f6c-bd49-cebb87ce6617</id>
+    <ipaddress>http://cwcc.bmc.com</ipaddress>
+    <port>6952</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://http://cwcc.bmc.com:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>AA-Viewer</description>
+    <label>AA-Viewer</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>0fc700df-1a62-4a56-9783-1a12496b305b</id>
+    <ipaddress>198.147.191.82</ipaddress>
+    <port>16198</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://192.168.96.142:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWC@Test</description>
+    <label>CWC@Test</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>4860ef0d-7bed-463e-b99c-70ed11c1296d</id>
+    <ipaddress>198.147.191.81</ipaddress>
+    <port>16196</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://cwcc.bmc.com:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWCC</description>
+    <label>CWCC</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>b54feaaa-2d4a-4d05-b12d-b809f95baa08</id>
+    <ipaddress>198.147.191.82</ipaddress>
+    <port>16196</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://cwc2.bmc.com:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description>CWC2</description>
+    <label>CWC2</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+  <Connection>
+    <id>198.147.191.82:2846</id>
+    <ipaddress>198.147.191.82</ipaddress>
+    <port>2846</port>
+    <socketType>HCI</socketType>
+    <databaseUri>jdbc:db2://198.147.191.82:&lt;port&gt;/${database}</databaseUri>
+    <databaseDriver>com.ibm.db2.jcc.DB2Driver</databaseDriver>
+    <databaseName>&lt;database&gt;</databaseName>
+    <SSIDName />
+    <description />
+    <label>cwc2:2846</label>
+    <skeletonDir>JCLSkeletons</skeletonDir>
+    <datasethlq />
+    <jclproperties>
+      <property key="lpar_tttrunner_lib" value="&lt;value&gt;" />
+    </jclproperties>
+  </Connection>
+</Connections>

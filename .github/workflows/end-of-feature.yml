@@ -1,0 +1,118 @@
+
+name: End of Feature
+
+on:
+  repository_dispatch:
+    types: [jira-done]
+
+jobs:
+
+  Close-Assignment:
+    runs-on: [ISPW]
+    steps:
+    # Runs a set of commands using the runners shell
+    - name: Close Assignment
+      id: assignClose
+      shell: pwsh
+      run: |
+          $headers = @{
+              "Authorization" = "${{ secrets.CES_TOKEN }}"
+              "Content-Type" = "application/json"
+          }
+
+          $body = @{
+              "runtimeConfiguration" = "${{ vars.CP_RUNTIME }}"
+          } | ConvertTo-Json -Depth 10
+
+          Invoke-WebRequest -Uri "${{ vars.CES_URL }}/ispw/${{ vars.CP_RUNTIME }}/assignments/${{ github.event.client_payload.assignment_id }}/close" `
+                            -Method POST `
+                            -Headers $headers `
+                            -Body $body `
+                            -ContentType "application/json"
+
+    # Runs a set of commands using the runners shell
+    - name: Post Comment to Jira
+      id: post
+      shell: pwsh
+      run: |
+          $User = "${{ vars.JIRA_USER }}"
+          $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
+          $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+  
+          # Prepare the request body in JSON format
+          $body = @{
+              body = @{
+                  type = "doc"
+                  version = 1
+                  content = @(
+                      @{
+                          type = "paragraph"
+                          content = @(
+                                if ("${{vars.LANGUAGE}}" -eq "EN") {
+                                    @{
+                                        type = "text"
+                                        text = "Code Pipeline Information : The assignment ${{ github.event.client_payload.assignment_id }} has been closed."
+                                    }
+                                }
+                                else {
+                                    @{
+                                        type = "text"
+                                        text = "Information Code Pipeline : L'assignment ${{ github.event.client_payload.assignment_id }} a été fermé."
+                                    }
+                                }
+                          )
+                      }
+                  )
+              }
+          } | ConvertTo-Json -Depth 5 -Compress
+
+          # Display the JSON body for debugging purposes
+          Write-Host "Request body: $body"
+
+          # Send the POST request to Jira API
+          $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ github.event.client_payload.issue_key }}/comment' `
+              -Method POST `
+              -Headers @{
+                  'Accept' = 'application/json'
+                  'Authorization' = "Basic $EncodedAuth"
+              } `
+              -Body $body `
+              -ContentType 'application/json'
+
+  Close-Branch:
+    needs: Close-Assignment
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Delete the branch locally and remotely
+      - name: Delete the branch
+        run: |
+          BRANCH_NAME="feature/${{ github.event.client_payload.issue_key }}"
+          echo "Branch to close: $BRANCH_NAME"
+
+          # Check if the branch exists locally
+          if git show-ref --quiet refs/heads/$BRANCH_NAME; then
+            echo "Deleting local branch $BRANCH_NAME..."
+            git branch -d $BRANCH_NAME || git branch -D $BRANCH_NAME
+          else
+            echo "Local branch $BRANCH_NAME does not exist."
+          fi
+
+          # Check if the branch exists remotely
+          if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
+            echo "Deleting remote branch $BRANCH_NAME..."
+            git push origin --delete $BRANCH_NAME
+          else
+            echo "Remote branch $BRANCH_NAME does not exist."
+          fi
+
+      # Step 3: Verify branch deletion
+      - name: Verify branch deletion
+        run: |
+          BRANCH_NAME="feature/${{ github.event.client_payload.issue_key }}"
+          echo "Verifying deletion of branch $BRANCH_NAME..."
+          git fetch --prune
+          git branch -r | grep origin/$BRANCH_NAME || echo "Branch $BRANCH_NAME successfully deleted!"

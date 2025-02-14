@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExecutionContext xmlns="http://www.xact.dk/xatester/v/1" environment="4860ef0d-7bed-463e-b99c-70ed11c1296d" logLevel="INFO" remote="false" useSimulations="true" uploadResult="false" timeout="600" readTimeout="30" debuggerType="NONE" jobInfoInterval="3">
+  <ExtensionData>
+    <Parameter key="load_lib">
+      <Value>SALESSUP.GITFLOWD.UNIT.LOAD</Value>
+    </Parameter>
+    <Parameter key="unittest.loadlibraries">
+      <Value>CEE.SCEERUN</Value>
+      <Value>SALESSUP.GITFLOWC.FEAT.LOAD</Value>
+      <Value>SALESSUP.GITFLOWC.PROD.LOAD</Value>
+    </Parameter>
+  </ExtensionData>
+  <XaUnit xmlns:data="http://www.xact.dk/xatester/data/v/1" componentNameUnderTest="CWXTSUBC" caseInsensitiveCompare="false" path="CWXTSUBC_Test1.context">
+    <Test>
+      <Unittest testscenariopath="CWXTSUBC_Test1.testscenario" moduleName="CWXTSUBC" />
+    </Test>
+  </XaUnit>
+</ExecutionContext>

@@ -1,0 +1,430 @@
+name: code-pipeline-sync-local
+
+on: 
+  push:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Proceed'
+        required: true
+        default: 'Yes'
+        type: choice
+        options:
+          - Yes
+          - No
+permissions:
+    checks: write
+    contents: read
+    
+jobs:
+
+  # Feature Branch CI event
+  Feature-branch-event:
+   if: (startsWith(github.ref, 'refs/heads/feature/'))
+   runs-on: [ISPW]
+   steps:
+      # Prompt Event
+      - name: Feature Branch Event
+        run: echo "Active Branch has been modified, Branch CI triggered."
+
+  Build:
+   needs: Feature-branch-event
+   runs-on: [ISPW]
+   outputs:
+      ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID}}
+      ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY}}
+   env:
+      Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
+   steps:
+      # Checkout the repository first 
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ISPW Sync
+      - name: Run local action
+        uses: bmc-compuware/ispw-sync-local@main
+        id: sync
+        with:
+          host: ${{ vars.HCI_HOST }}
+          port: ${{ vars.HCI_PORT }}
+          uid: ${{ vars.TSO_USER }}
+          pass: ${{ secrets.TSO_TOKEN }}
+          runtimeConfiguration: ${{ vars.CP_RUNTIME }}
+          stream: ${{ vars.CP_STREAM }}
+          application: ${{ vars.CP_APPL }}
+          subAppl: ${{ vars.CP_SUBAPPL }}
+          checkoutLevel: 'FEAT'
+          gitUid: ${{ vars.GIT_USERID }}
+          gitToken: ${{ secrets.GIT_TOKEN }}
+          winTopazPath: ${{ env.Win_Topaz_Location }}
+          containerCreation: 'per-branch'
+          showEnv: true
+          assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
+          ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+
+      # Build Parameters retrieve
+      - name: Get Automatic build parameters
+        id: parms
+        run:  |
+          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson }}"
+
+      # Check Build Parameters
+      - name: Check Build Parms
+        shell: pwsh
+        id: checkbuild
+        run: |
+            if (-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
+                Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
+                Write-Host "##vso[task.complete result=Failed;]DONE"
+            } else {
+                Write-Host "Mainframe Build parameters were found. Will continue with full Mainframe Build process."
+                $fileContent = Get-Content .\automaticBuildParams.txt -Raw
+                $json = ConvertFrom-JSON $fileContent
+
+                $taskParm = ($json.taskIds -join ",")
+                $taskLevel = $json.taskLevel
+                $assignmentId = $json.containerId
+
+                Write-Host "Identified Tasks: $taskParm"
+                Write-Host "Assignment ID: $assignmentId"
+                Write-Host "Level: $taskLevel"
+
+                Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+                Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+                Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+
+                # Get the active branch name
+                $branchName = git rev-parse --abbrev-ref HEAD
+
+                # Split by '/' and get the last part
+                $issueKey = $branchName -split '/' | Select-Object -Last 1
+
+                echo "ASSIGNMENT_ID=$assignmentId" >> $env:GITHUB_OUTPUT
+                echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
+
+            }    
+
+      # Get Issue Info from Jira related to this branch
+      - name: Get Issue Info
+        shell: pwsh
+        run: |
+
+          $User = "eraso.xavier@gmail.com"
+          $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  
+          $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+          
+          try {
+          # Send the GET request to Jira API
+          $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}' `
+              -Method GET `
+              -Headers @{
+                  'Accept' = 'application/json'
+                  'Authorization' = "Basic $EncodedAuth"
+              } `
+              -ErrorAction Stop  
+          
+          # Parse the response and extract the subset using ConvertFrom-Json
+          $json = $response.Content | ConvertFrom-Json
+          
+          # Check if customfield_10054 exists and is not null
+          if ($json.fields.PSObject.Properties["customfield_10054"]) {
+              $assignment = $json.fields.customfield_10054
+              Write-Host "Extracted subset: $assignment"
+          } else {
+              Write-Host "customfield_10054 is not present or is null."
+              $assignment = "NOTFOUND"
+          }
+          
+          # Save the value to the GitHub Actions environment
+          Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
+          }
+          catch {
+              # Handle the case where the issue does not exist or there is an error
+              Write-Host "Error: Issue not found or unable to retrieve issue data. $($_.Exception.Message)"
+              
+              # Optionally, set a default value or handle accordingly
+              $assignment = "NOTFOUND"
+              Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
+          }
+      
+      # Set Assignment ID in the issue
+      - name: Set Issue Assignment ID
+        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' }}
+        shell: pwsh
+        run: |
+              $User = "${{ vars.JIRA_USER }}"
+              $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
+              $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+      
+              # Prepare the request body in JSON format
+              $body = @{
+                  fields = @{
+                      customfield_10054 = @("${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}")
+                  }
+              } | ConvertTo-Json -Depth 3
+      
+              # Send the PUT request to Jira API
+              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}' `
+                  -Method PUT `
+                  -Headers @{
+                      'Accept' = 'application/json'
+                      'Authorization' = "Basic $EncodedAuth"
+                  } `
+                  -Body $body `
+                  -ContentType 'application/json'
+
+      # Create associated comment
+      - name: Update Issue Comment
+        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' }}
+        shell: pwsh
+        run: |
+              $User = "${{ vars.JIRA_USER }}"
+              $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
+              $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+      
+              # Prepare the request body in JSON format
+              $body = @{
+                  body = @{
+                      type = "doc"
+                      version = 1
+                      content = @(
+                          @{
+                              type = "paragraph"
+                              content = @(
+                                if ("${{vars.LANGUAGE}}" -eq "EN") {
+                                    @{
+                                        type = "text"
+                                        text = "Code Pipeline Information : The assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} has been created for this feature."
+                                    }
+                                }
+                                else {
+                                    @{
+                                        type = "text"
+                                        text = "Information Code Pipeline : L'assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} a été créé pour cette user story."
+                                    }
+                                }
+                             )
+                          }
+                      )
+                  }
+              } | ConvertTo-Json -Depth 5 -Compress
+
+              # Display the JSON body for debugging purposes
+              Write-Host "Request body: $body"
+
+              # Send the POST request to Jira API
+              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}/comment' `
+                  -Method POST `
+                  -Headers @{
+                      'Accept' = 'application/json'
+                      'Authorization' = "Basic $EncodedAuth"
+                  } `
+                  -Body $body `
+                  -ContentType 'application/json'
+
+      # Build
+      - name: Build
+        uses: bmc-compuware/ispw-build@v1
+        id: build
+        with:
+          ces_url: ${{ vars.CES_URL }}
+          ces_token: ${{ secrets.CES_TOKEN }}
+          srid: 'ispw'
+          runtime_configuration: ${{ vars.CP_RUNTIME }}
+          build_automatically: ${{ steps.sync.outputs.automaticBuildJson }}
+
+      # Check for Failures
+      - name: Get the number of build failures
+        run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
+
+
+  Test :
+      needs: Build
+      runs-on: [ISPW]
+      env:
+        CLI_LOCATION : ${{ vars.CLI_LOCATION }}
+        ASSIGNMENT_ID : ${{ needs.Build.outputs.ASSIGNMENT_ID }}
+      outputs:
+        RUN_DATE : ${{ steps.runDate.outputs.RUN_DATE }}
+      steps:
+
+      # Retrieve Timestamp as Test ID
+      - name: Get Current Date
+        id: runDate
+        shell: pwsh
+        run: |
+          $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+          echo "RUN_DATE=$timestamp" >> $env:GITHUB_OUTPUT
+
+      # Run Unit Tests
+      - name: Run Unit Tests
+        shell: pwsh
+        id: runTests
+        run: |
+          & "${{ env.CLI_LOCATION }}/TotalTestFTCLI.bat" `
+            -cp ${{ vars.TSO_CODE_PAGE }} `
+            -host ${{ vars.HCI_HOST }} `
+            -port ${{ vars.HCI_PORT }} `
+            -cfgdir ${{ vars.TT_CONFIG }}  `
+            -encrypt None `
+            -u ${{ vars.TSO_USER }}  `
+            -p ${{ secrets.TSO_TOKEN }} `
+            -cesu ${{ vars.TSO_USER }}  `
+            -cesp ${{ secrets.TSO_TOKEN }} `
+            -f ${{ vars.TEST_FOLDER }} `
+            -pnf changedPrograms.json `
+            -ccrepo ${{ vars.CC_REPO }} `
+            -ccsys ${{ env.ASSIGNMENT_ID }} `
+            -cctid ${{ steps.runDate.outputs.RUN_DATE }} `
+            -R -G -v 6 -loglevel INFO `
+            -data "${{ github.workspace }}/cliWkspce"
+
+      # Create Test Report with jUnit file
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Report
+          path: ${{ vars.JUNIT_PATH }}
+          reporter: java-junit
+          fail-on-error: true
+
+  CodeCoverage :
+      needs: [Build,Test]
+      runs-on: [ISPW]
+      env:
+        CLI_LOCATION : ${{ vars.CLI_LOCATION }}
+        ASSIGNMENT_ID : ${{ needs.Build.outputs.ASSIGNMENT_ID }}
+        RUN_DATE : ${{ needs.Test.outputs.RUN_DATE }}
+      steps:
+
+      # Retrieve Code Coverage Results
+      - name: Code Coverage Export
+        shell: pwsh
+        id: codeCoverage
+        run: |
+             ${{ vars.CLI_LOCATION }}/CodeCoverageCLI.bat `
+             -host "${{ vars.HCI_HOST }}" -port "${{ vars.HCI_PORT }}" -code "${{ vars.TSO_CODE_PAGE }}" -timeout "0" `
+             -id "${{ vars.TSO_USER }}" -pass "${{ secrets.TSO_TOKEN }}" `
+             -targetFolder "${{ github.workspace }}" -data "${{ github.workspace }}/cliWkspce" `
+             --cc.repos "${{ vars.CC_REPO }}" `
+             --cc.system "${{ env.ASSIGNMENT_ID }}" `
+             --cc.test "${{ env.RUN_DATE }}" `
+             --cc.sources "${{ vars.CC_SOURCES }}"     
+
+  SonarQube :
+      needs: CodeCoverage
+      runs-on: [ISPW]
+      steps:
+
+      # Run SonarQube Scanner
+      - name: SonarQube Analysis
+        shell: pwsh
+        run: |
+          & "${{ vars.SONAR_PATH }}/sonar-scanner.bat" `
+            "-Dsonar.projectKey=${{ vars.SONAR_PROJECT }}" `
+            "-Dsonar.host.url=${{ vars.SONAR_URL }}" `
+            "-Dsonar.token=${{ secrets.SONAR_TOKEN }} " `
+            "-Dsonar.tests=${{ vars.SONAR_TESTS }}" `
+            "-Dsonar.testExecutionReportPaths=${{ vars.SONAR_TESTEXEC_REPORT }}" `
+            "-Dsonar.coverageReportPaths=${{ vars.SONAR_CC_REPORT }}" `
+            "-Dsonar.sources=${{ vars.CC_SOURCES }}" `
+            "-Dsonar.cobol.file.suffixes=cbl,testsuite,testscenario,context,stub" `
+            "-Dsonar.cobol.copy.suffixes=cpy" `
+            "-Dsonar.sourceEncoding=UTF-8" `
+            "-Dsonar.qualitygate.wait=true"
+
+  # Job for Release branch build
+  release-branch-build:
+   if: (startsWith(github.ref, 'refs/heads/release/'))
+   runs-on: [self-hosted]
+   env:
+    Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
+   steps:
+      - name: checkout step
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+          
+      - name: Sync code 
+        shell: pwsh
+        id: sync
+        run: |
+         $currentTag = (git tag --sort=-refname).Split("`n")[0].Trim()
+         $previousTag = (git tag --sort=-refname).Split("`n")[1].Trim()
+            
+         $fromCommit = (git rev-list -1 $previousTag)
+         $toCommit = (git rev-parse --verify HEAD)
+            
+         $currentCommit  = $toCommit
+         $previousCommit = $fromCommit
+         
+         cmd.exe /c "${{ env.Win_Topaz_Location }}\IspwCLI.bat" -operation syncGitToIspw -gitLocalPath '.\' -data ${{ github.workspace }}\cliWkspce  -gitBranch ${{ github.ref_name }} -host ${{ vars.HCI_HOST }} -port  ${{ vars.HCI_PORT }} -id ${{ vars.TSO_USER }} -pass ${{ secrets.TSO_TOKEN }} -protocol None -code ${{ vars.TSO_CODE_PAGE }} -timeout 0 -ispwServerConfig ${{ vars.CP_RUNTIME }} -ispwConfigPath "GenApp_MainframeCore\ispwconfig-nosb.yml" -ispwServerStream ${{ vars.CP_STREAM }} -ispwServerApp ${{ vars.CP_APPL }} -ispwCheckoutLevel "RLSE" -ispwContainerCreation "per-branch" -assignmentPrefix ${{ vars.CP_ASSIGNPREFIX }} -gitRepoUrl "${{ github.server_url }}/${{ github.repository }}.git" -gitFromHash $previousCommit -gitCommit $currentCommit 
+    
+      - name: Check Build Parms
+        shell: pwsh
+        id: checkbuild
+        run: |
+          if(-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
+ 
+           Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
+           Write-Host "##vso[task.complete result=Failed;]DONE"
+          }
+          else {
+ 
+           Write-Host "Mainframe Build parameters were found. Will continue with full Mainframe Build process."
+         
+           [string]$fileContent  = ''          
+           $fileContent          = Get-Content .\automaticBuildParams.txt
+           $content              = ''
+ 
+           foreach ($line in $fileContent) { $content = $content + "`n" + $line }
+           
+           $json                 = ConvertFrom-JSON $content
+ 
+           $taskParm             = ""
+ 
+           foreach($taskId in $json.taskIds) {
+               $taskParm = $taskParm + $taskId + ","
+           }
+ 
+           $taskParm = $taskParm.Substring(0,$taskParm.Length - 1)
+ 
+           $taskLevel    = $json.taskLevel
+           $assignmentId = $json.containerId
+
+           Write-Host "Build JSON: " 
+           Write-Host $fileContent
+           Write-Host "Identified" 
+           Write-Host "  Tasks"
+           Write-Host $taskParm
+           Write-Host "  Assignment"
+           Write-Host $assignmentId
+           Write-Host "  Level"
+           Write-Host $taskLevel
+ 
+           Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+           Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+           Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+           echo "::set-output name=BuildJSON::$fileContent"
+
+           Write-Host $BuildJSON
+          }
+ 
+      - name: Build
+        uses: bmc-compuware/ispw-build@v1
+        id: build
+        with:
+          ces_url: ${{ vars.CES_URL }}
+          ces_token: ${{ secrets.CES_TOKEN }}
+          srid: 'ispw'
+          runtime_configuration: ${{ vars.CP_RUNTIME }}
+          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON }}
+          
+      - name: Get the number of build failures
+        run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
+             
+      - name: Run Tests
+        run: echo "Ran Tests successfully!"
+      

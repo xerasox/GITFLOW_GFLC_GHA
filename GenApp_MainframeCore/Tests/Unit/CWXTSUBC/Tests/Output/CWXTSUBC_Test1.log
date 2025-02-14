@@ -1,0 +1,44 @@
+14:03:05.739 INFO      TOPAZ            ***************************************
+14:03:05.740 INFO      TOPAZ            ** Execution from Topaz with options **
+14:03:05.740 INFO      TOPAZ            ***************************************
+14:03:05.740 INFO      TOPAZ            Using repository: true
+14:03:05.740 INFO      TOPAZ            Repository URL: http://cwc2.bmc.com:2020/totaltestapi/
+14:03:05.740 INFO      TOPAZ            ***************************************
+14:03:05.743 INFO      Engine           Test Scenario execution started
+14:03:05.743 INFO      Engine           Using context settings:
+  Engine Version                : 20.12.2.v20221024-2031_109
+  Environment id                : 5c519facfba8720a90ccc645
+  Environment type              : Batch
+  Operating system              : ZOS
+  zOS agent version             : NEWEST
+  Server address                : cwc2.bmc.com
+  Server port                   : 16196
+  Job execution timeout seconds : 600
+  Job info interval seconds     : 3
+  Socket read timeout           : 30
+  Encoding                      : ISO8859-1
+  Codepage                      : IBM-1047
+  Host user Id                  : HDDRXM0
+  Use Repository Server         : true
+  Account Information           : 
+  Dataset High Level Qualifier  : 
+14:03:05.744 INFO      Engine           Setting variables from context and context data extensions
+14:03:05.744 INFO      Engine             id: environmentId      value: 5c519facfba8720a90ccc645
+14:03:05.746 INFO      Engine             id: environmentType    value: BATCH
+14:03:05.746 INFO      Engine             id: userId             value: HDDRXM0
+14:03:05.746 INFO      Engine             id: accountingInfo     value: 
+14:03:05.746 INFO      Engine             id: datasetHQL         value: 
+14:03:05.746 INFO      Engine             id: load_lib           value: SALESSUP.GFLD.UNIT.LOAD
+14:03:05.747 INFO      Unittest         Interpreting Unittest of module: CWXTSUBC testscenario path: CWXTSUBC_Test1.testscenario
+14:03:05.972 INFO      Unittest         Using JCL skeleton to submit JCL
+14:03:10.304 INFO      TEST DRIVE - Batch Sending Job execution request to Host 
+14:03:15.644 INFO      TEST DRIVE - Batch Job execution completed with status:
+  Job status     : ABEND
+  Job status msg : Job HDDRXM0A(J0383765) ended with ABEND code: S806
+  Job name       : HDDRXM0A
+  Job id         : J0383765
+  Return code    : 
+  Abend code     : S806
+  Abend reason   : U0000
+14:03:17.398 INFO      Unittest         Execution completed
+14:03:17.398 INFO      Engine           Test Scenario execution ended
