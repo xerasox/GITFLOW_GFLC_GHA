@@ -116,22 +116,14 @@ jobs:
       
       # Checkout develop branch
       - name: Checkout develop branch
-<<<<<<< HEAD
-        if: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} != ''
-=======
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }}
->>>>>>> feature/SCRUM-22
         uses: actions/checkout@v4
         with:
           ref: develop
 
       # Get last commit hash from develop branch
       - name: Get last commit hash
-<<<<<<< HEAD
-        if: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} != ''
-=======
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }}
->>>>>>> feature/SCRUM-22
         id: getLastCommit
         run: |
           $last_commit = git rev-parse HEAD
@@ -140,19 +132,12 @@ jobs:
 
       # Checkout the repository first 
       - name: Checkout repository
-<<<<<<< HEAD
-=======
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }} 
->>>>>>> feature/SCRUM-22
         uses: actions/checkout@v3
           
       # Re-run sync if build parameters exist !
       - name: Re-run sync if first build
-<<<<<<< HEAD
-        if: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} != ''
-=======
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }}
->>>>>>> feature/SCRUM-22
         uses: bmc-compuware/ispw-sync-local@main
         id: re-sync
         with:
@@ -172,10 +157,6 @@ jobs:
           showEnv: true
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
           ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
-<<<<<<< HEAD
-          gitCommit : ${{ steps.getLastCommit.outputs.ACTIVE_COMMIT }}
-          gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
-=======
           gitCommit : ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
           gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
 
@@ -222,7 +203,6 @@ jobs:
                 echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
 
             }    
->>>>>>> feature/SCRUM-22
 
       # Get Issue Info from Jira related to this branch
       - name: Get Issue Info
