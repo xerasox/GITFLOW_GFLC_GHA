@@ -33,6 +33,7 @@ jobs:
    outputs:
       ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID}}
       ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY}}
+      $LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
    env:
       Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
    steps:
@@ -103,6 +104,47 @@ jobs:
                 echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
 
             }    
+      
+      # Checkout develop branch
+      - name: Checkout develop branch
+        if: ASSIGNMENT_ID != ''
+        name: Get Last Commit from Develop
+        runs-on: ubuntu-latest
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      # Get last commit hash from develop branch
+      - name: Get last commit hash
+        if: ASSIGNMENT_ID != ''
+        id: getLastCommit
+        run: |
+          LAST_COMMIT=$(git rev-parse HEAD)
+          echo "Last commit on develop: $LAST_COMMIT"
+
+      # Re-run sync if build parameters exist
+      - name: Re-run sync if first build
+        if: ASSIGNMENT_ID != ''
+        uses: bmc-compuware/ispw-sync-local@main
+        id: sync
+        with:
+          host: ${{ vars.HCI_HOST }}
+          port: ${{ vars.HCI_PORT }}
+          uid: ${{ vars.TSO_USER }}
+          pass: ${{ secrets.TSO_TOKEN }}
+          runtimeConfiguration: ${{ vars.CP_RUNTIME }}
+          stream: ${{ vars.CP_STREAM }}
+          application: ${{ vars.CP_APPL }}
+          subAppl: ${{ vars.CP_SUBAPPL }}
+          checkoutLevel: 'FEAT'
+          gitUid: ${{ vars.GIT_USERID }}
+          gitToken: ${{ secrets.GIT_TOKEN }}
+          winTopazPath: ${{ env.Win_Topaz_Location }}
+          containerCreation: 'per-branch'
+          showEnv: true
+          assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
+          ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+          gitFromHash : ${{ steps.checkbuild.outputs.gitFromHash }}
 
       # Get Issue Info from Jira related to this branch
       - name: Get Issue Info
