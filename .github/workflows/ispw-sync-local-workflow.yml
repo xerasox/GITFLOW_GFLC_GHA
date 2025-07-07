@@ -159,6 +159,50 @@ jobs:
           gitCommit : ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
           gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
 
+      # Build Parameters retrieve
+      - name: Get Automatic build parameters
+        if: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} != ''
+        id: parms2
+        run:  |
+          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson }}"
+
+      # Check Build Parameters
+      - name: Check Build Parms
+        shell: pwsh
+        if: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} != ''
+        id: checkbuild2
+        run: |
+            if (-not (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf)) {
+                Write-Host "No Mainframe Build parameters were found. Likely, no MF components were modified. The build will continue and just execute a code scan."
+                Write-Host "##vso[task.complete result=Failed;]DONE"
+            } else {
+                Write-Host "Mainframe Build parameters were found. Will continue with full Mainframe Build process."
+                $fileContent = Get-Content .\automaticBuildParams.txt -Raw
+                $json = ConvertFrom-JSON $fileContent
+
+                $taskParm = ($json.taskIds -join ",")
+                $taskLevel = $json.taskLevel
+                $assignmentId = $json.containerId
+
+                Write-Host "Identified Tasks: $taskParm"
+                Write-Host "Assignment ID: $assignmentId"
+                Write-Host "Level: $taskLevel"
+
+                Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
+                Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
+                Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
+
+                # Get the active branch name
+                $branchName = git rev-parse --abbrev-ref HEAD
+
+                # Split by '/' and get the last part
+                $issueKey = $branchName -split '/' | Select-Object -Last 1
+
+                echo "ASSIGNMENT_ID=$assignmentId" >> $env:GITHUB_OUTPUT
+                echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
+
+            }    
+
       # Get Issue Info from Jira related to this branch
       - name: Get Issue Info
         shell: pwsh
