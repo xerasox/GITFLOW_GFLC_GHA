@@ -26,7 +26,7 @@ jobs:
         branch: 'feature/${{ github.event.client_payload.issue_key }}'
 
   SonarQube :
-      needs: branchCreate
+      needs: Branch-Creation
       runs-on: [ISPW]
       steps:
 
