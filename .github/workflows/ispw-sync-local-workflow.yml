@@ -108,7 +108,6 @@ jobs:
       # Checkout develop branch
       - name: Checkout develop branch
         if: ASSIGNMENT_ID != ''
-        runs-on: ubuntu-latest
         uses: actions/checkout@v4
         with:
           ref: develop
