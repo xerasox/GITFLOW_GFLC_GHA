@@ -34,7 +34,7 @@ jobs:
       ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID}}
       ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY}}
       $LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
-      $ACTIVE_COMMIT: ${{ steps.getLastCommit.outputs.ACTIVE_COMMIT }}
+      $ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
    env:
       Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
    steps:
