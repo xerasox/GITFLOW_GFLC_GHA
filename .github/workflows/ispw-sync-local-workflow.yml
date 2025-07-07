@@ -34,12 +34,21 @@ jobs:
       ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID}}
       ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY}}
       $LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
+      $ACTIVE_COMMIT: ${{ steps.getLastCommit.outputs.ACTIVE_COMMIT }}
    env:
       Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
    steps:
       # Checkout the repository first 
       - name: Checkout repository
         uses: actions/checkout@v3
+        
+      # Get last commit hash from develop branch
+      - name: Get active commit hash
+        id: getActiveCommit
+        run: |
+          $active_commit = git rev-parse HEAD
+          echo "Active commit on develop: $ACTIVE_COMMIT"
+          echo "ACTIVE_COMMIT=$active_commit" >> $env:GITHUB_OUTPUT
 
       # ISPW Sync
       - name: Run local action
@@ -143,6 +152,7 @@ jobs:
           showEnv: true
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
           ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+          gitCommit : ${{ steps.getLastCommit.outputs.ACTIVE_COMMIT }}
           gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
 
       # Get Issue Info from Jira related to this branch
