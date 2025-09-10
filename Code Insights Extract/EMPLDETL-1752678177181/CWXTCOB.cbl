@@ -14,7 +14,7 @@
       *                                                                *
       *  RUN JCL     - STORED IN XPEDITER/TSO SAMPLIB (CWXTJCLC)       *
       *                                                                *
-      * DEMO 2025.09.09 - 16:57                                        *
+      * DEMO 2025.07.08 - 10:05                                        *
       *                                                                *
       ******************************************************************
        ENVIRONMENT DIVISION.
@@ -167,6 +167,8 @@
 *********  BLANK LINE TO CONTROL SPACING OF REPORTS
 *********
        01  BLANK-LINE             PIC X(80)   VALUE SPACES.
+       01  EMPLDETL-INDEXSUB        PIC S9(9) COMP.
+       01  EMPLDETL2-INDEXSUB        PIC S9(9) COMP.
 *********
 *********  PARM IS AN OPTIONAL FIELD USED TO START PROCESSING
 *********  AT A PARTICULAR RECORD IN THE EMPLOYEE FILE.  VALID
@@ -300,54 +302,20 @@
 *********  EMPLOYEES.
 *********
        5000-STORE-EMPLOYEE-DETAIL.
-           PERFORM 5100-SET-INDEX.
-           IF VALID-REGION
-               MOVE WA-EMP-NAME TO HOLD-NAME (REG-IX, HOLD-IX)
-               MOVE REGION-ID (WA-EMP-REGION)
-                                TO HOLD-REGION (REG-IX, HOLD-IX)
-               MOVE WA-EMP-TYPE TO HOLD-TYPE (REG-IX, HOLD-IX)
-               MOVE WA-EMP-HIRE-DATE TO HOLD-HIRE-DATE (REG-IX, HOLD-IX)
-               MOVE YRS-OF-SERVICE TO HOLD-YEARS (REG-IX, HOLD-IX)
-               MOVE EMP-COMPENSATION
-                                TO HOLD-TOTAL (REG-IX, HOLD-IX)
-               IF HOURLY
-                  MOVE EMP-WAGES TO HOLD-WAGES (REG-IX, HOLD-IX)
-                  MOVE OT-AMOUNT TO HOLD-OT (REG-IX, HOLD-IX)
-                  MOVE ZEROS     TO HOLD-COMM (REG-IX, HOLD-IX)
-               ELSE
-                  MOVE WA-SALES-SALARY
-                                 TO HOLD-WAGES(REG-IX, HOLD-IX)
-                  MOVE CALC-COMMISSION
-                                 TO HOLD-COMM (REG-IX, HOLD-IX)
-                  MOVE ZERO      TO HOLD-OT   (REG-IX, HOLD-IX).
-*********
-*********  SET THE REGION INDEX BASED ON EMPLOYEE REGION ID AND
-*********  SEQUENTIALLY INCREMENT HOLD INDEX WITHIN EACH REGION.
-*********  THE EMPLOYEE COMPENSATION REPORT WILL BE GROUPED BY
-*********  REGION.  IF AN INVALID REGION IS FOUND, AN ERROR MESSAGE
-*********  IS WRITTEN AND PROCESSING CONTINUES.
-*********
-       5100-SET-INDEX.
-           MOVE 'N' TO REGION-ERROR-SW.
-           IF NORTH
-               ADD 1 TO NORTH-COUNT
-               SET HOLD-IX TO NORTH-COUNT
-           ELSE
-               IF SOUTH
-                   ADD 1 TO SOUTH-COUNT
-                   SET HOLD-IX TO SOUTH-COUNT
-               ELSE
-                   IF EAST
-                       ADD 1 TO EAST-COUNT
-                       SET HOLD-IX TO EAST-COUNT
-                   ELSE
-                       IF WEST
-                           ADD 1 TO WEST-COUNT
-                           SET HOLD-IX TO WEST-COUNT
-                       ELSE
-                           MOVE 'Y' TO REGION-ERROR-SW.
-           IF VALID-REGION
-               SET REG-IX TO WA-EMP-REGION.
+           SET EMPLDETL-INDEXSUB TO REG-IX.
+           SET EMPLDETL2-INDEXSUB TO HOLD-IX.
+           CALL 'EMPLDETL' USING COUNTERS
+                           YRS-OF-SERVICE
+                           REGION-NAME-TABLE
+                           CALC-COMMISSION-FIELDS
+                           TOTAL-FIELDS
+                           OVERTIME-FIELDS
+                           HOLD-TABLE
+                           SWITCHES
+                           EMPLDETL-INDEXSUB
+                           EMPLDETL2-INDEXSUB.
+           SET REG-IX TO EMPLDETL-INDEXSUB.
+           SET HOLD-IX TO EMPLDETL2-INDEXSUB.
 *********
 *********  COMPENSATION DATA FOR HOURLY AND SALES EMPLOYEES ARE PRINTED
 *********  TO THE EMPLOYEE COMPENSATION REPORT FROM THE HOLD TABLE.
