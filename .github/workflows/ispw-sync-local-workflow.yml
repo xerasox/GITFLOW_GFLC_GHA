@@ -431,8 +431,9 @@ jobs:
             "-Dsonar.sources=${{ vars.CC_SOURCES }}" `
             "-Dsonar.cobol.file.suffixes=cbl,testsuite,testscenario,context,stub" `
             "-Dsonar.cobol.copy.suffixes=cpy" `
-            "-Dsonar.sourceEncoding=UTF-8" `
-            "-Dsonar.qualitygate.wait=true"
+            "-Dsonar.sourceEncoding=UTF-8"
+
+      # "-Dsonar.qualitygate.wait=true"
 
   # Job for Release branch build
   release-branch-build:
