@@ -1,7 +1,13 @@
 trigger: none  # Manual trigger only
 
+parameters:
+- name: AssignmentID
+  displayName: 'Enter Assignment ID'
+  type: string
+
 variables:
-  apiToken: $(apiToken)  # Store this securely in Azure DevOps variable group or Key Vault
+- name: apiToken
+  value: $(apiToken)  # Reference to a secret variable
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -10,10 +16,14 @@ stages:
 - stage: Dev
   displayName: 'Deploy to Dev'
   jobs:
-  - job: DeployDev
-    steps:
-    - script: echo "Deploying to Dev..."
-
+  - deployment: DeployDev
+    environment: Dev
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+                      echo "Deploying to Dev with Assignment: ID ${{ parameters.AssignmentID }}"
 
 - stage: QA
   displayName: 'Deploy to QA'
@@ -26,7 +36,8 @@ stages:
       runOnce:
         deploy:
           steps:
-          - script: echo "Deploying to QA..."
+          - script: |
+                       echo "Deploying to QA with Assignment ID: ${{ parameters.AssignmentID }}"
 
 - stage: Prod
   displayName: 'Deploy to Prod'
@@ -39,6 +50,5 @@ stages:
       runOnce:
         deploy:
           steps:
-          - script: echo "Deploying to Prod..."
-
-
+          - script: |
+                       echo "Deploying to Prod with Assignment ID: ${{ parameters.AssignmentID }}"
