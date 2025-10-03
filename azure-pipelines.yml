@@ -1,0 +1,44 @@
+trigger: none  # Manual trigger only
+
+variables:
+  apiToken: $(apiToken)  # Store this securely in Azure DevOps variable group or Key Vault
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Dev
+  displayName: 'Deploy to Dev'
+  jobs:
+  - job: DeployDev
+    steps:
+    - script: echo "Deploying to Dev..."
+
+
+- stage: QA
+  displayName: 'Deploy to QA'
+  dependsOn: Dev
+  condition: succeeded()
+  jobs:
+  - deployment: DeployQA
+    environment: QA
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Deploying to QA..."
+
+- stage: Prod
+  displayName: 'Deploy to Prod'
+  dependsOn: QA
+  condition: succeeded()
+  jobs:
+  - deployment: DeployProd
+    environment: Prod
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Deploying to Prod..."
+
+
