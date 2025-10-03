@@ -19,7 +19,7 @@ stages:
   - job: DeployDev
     steps:
       - script: |
-                  echo "Deploying to Dev with Assignment: ID ${{ parameters.AssignmentID }}"
+                  echo "Deploying to Dev with Assignment ID : ${{ parameters.AssignmentID }}"
 
 - stage: QA
   displayName: 'Deploy to QA'
@@ -33,7 +33,7 @@ stages:
         deploy:
           steps:
           - script: |
-                       echo "Deploying to QA with Assignment ID: ${{ parameters.AssignmentID }}"
+                       echo "Deploying to QA with Assignment ID : ${{ parameters.AssignmentID }}"
 
 - stage: Prod
   displayName: 'Deploy to Prod'
@@ -47,4 +47,4 @@ stages:
         deploy:
           steps:
           - script: |
-                       echo "Deploying to Prod with Assignment ID: ${{ parameters.AssignmentID }}"
+                       echo "Deploying to Prod with Assignment ID : ${{ parameters.AssignmentID }}"
