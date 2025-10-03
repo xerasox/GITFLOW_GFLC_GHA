@@ -24,6 +24,24 @@ stages:
           steps:
            - script: |
                          echo "Deploying to Dev with Assignment ID : ${{ parameters.AssignmentID }}"
+                         
+                          $headers = @{
+                                              "Authorization" = "$(CES_TOKEN)"
+                                              "Content-Type" = "application/json"
+                                          }
+
+                                          $body = @{
+                                              "runtimeConfiguration" = "$(CP_RUNTIME)"
+                                          } | ConvertTo-Json -Depth 10
+
+                                          $url = "$(CES_URL)/ispw/$(CP_RUNTIME)/assignments/$(assignment_id)/close"
+
+                                          Write-Host "Calling CES API: $url"
+                                          Invoke-WebRequest -Uri $url `
+                                                            -Method POST `
+                                                            -Headers $headers `
+                                                            -Body $body `
+                                                            -ContentType "application/json"
 
 - stage: QA
   displayName: 'Deploy to QA'
