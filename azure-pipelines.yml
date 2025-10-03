@@ -16,14 +16,10 @@ stages:
 - stage: Dev
   displayName: 'Deploy to Dev'
   jobs:
-  - deployment: DeployDev
-    environment: Dev
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: |
-                      echo "Deploying to Dev with Assignment: ID ${{ parameters.AssignmentID }}"
+  - job: DeployDev
+    steps:
+      - script: |
+                  echo "Deploying to Dev with Assignment: ID ${{ parameters.AssignmentID }}"
 
 - stage: QA
   displayName: 'Deploy to QA'
