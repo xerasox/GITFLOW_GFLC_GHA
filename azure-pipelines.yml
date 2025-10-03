@@ -34,7 +34,7 @@ stages:
                                               "runtimeConfiguration" = "$(CP_RUNTIME)"
                                           } | ConvertTo-Json -Depth 10
 
-                                          $url = "$(CES_URL)/ispw/$(CP_RUNTIME)/assignments/$(assignment_id)/close"
+                                          $url = "$(CES_URL)/ispw/$(CP_RUNTIME)/assignments/${{ parameters.AssignmentID }}tasks/promote?level=FEAT"
 
                                           Write-Host "Calling CES API: $url"
                                           Invoke-WebRequest -Uri $url `
