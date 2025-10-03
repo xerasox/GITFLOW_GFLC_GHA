@@ -6,6 +6,7 @@ parameters:
   type: string
 
 variables:
+- group: 'GITFLOW_GFLC'
 - name: apiToken
   value: $(apiToken)  # Reference to a secret variable
 
