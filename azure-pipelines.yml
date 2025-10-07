@@ -112,8 +112,11 @@ stages:
                                           -Body $body `
                                           -ContentType "application/json"
 
-                        # Parse the JSON content
-                        $content = $response.Content | ConvertFrom-Json
+                        # Extract JSON from RawContent
+                        $jsonText = $response.RawContent -replace 'HTTP/1.1 200 OK.*?\r?\n\r?\n', ''
+
+                        # Parse JSON
+                        $content = $jsonText | ConvertFrom-Json
 
                         # Extract the setId
                         $setId = $content.setId
