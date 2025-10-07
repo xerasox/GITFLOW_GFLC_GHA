@@ -12,11 +12,11 @@ pool:
   name: 'Default'
 
 stages:
-- stage: Dev
-  displayName: 'Deploy to Dev'
+- stage: RLSE
+  displayName: 'Deploy to RLSE'
   jobs:
-  - deployment: DeployDev
-    environment: Dev
+  - deployment: DeployRLSE
+    environment: RLSE
     strategy:
       runOnce:
        deploy:
@@ -44,13 +44,13 @@ stages:
                                           -Body $body `
                                           -ContentType "application/json"
 
-- stage: QA
-  displayName: 'Deploy to QA'
-  dependsOn: Dev
+- stage: PREP
+  displayName: 'Deploy to PREP'
+  dependsOn: RLSE
   condition: succeeded()
   jobs:
-  - deployment: DeployQA
-    environment: QA
+  - deployment: DeployPREP
+    environment: PREP
     strategy:
       runOnce:
         deploy:
@@ -78,13 +78,13 @@ stages:
                                           -Body $body `
                                           -ContentType "application/json"
 
-- stage: Prod
-  displayName: 'Deploy to Prod'
-  dependsOn: QA
+- stage: PROD
+  displayName: 'Deploy to PROD'
+  dependsOn: PREP
   condition: succeeded()
   jobs:
-  - deployment: DeployProd
-    environment: Prod
+  - deployment: DeployPROD
+    environment: PROD
     strategy:
       runOnce:
         deploy:
@@ -124,7 +124,7 @@ stages:
                         Write-Host "Extracted setId: $setId"
 
                         # Example: Use setId in another API call
-                        $nextUrl = "$(CES_URL)/ispw/$(CP_RUNTIME)/sets/$setId/approve?approver=GFLCAPPR"
+                        $nextUrl = "$(cesUrl)/ispw/$(runtimeConfig)/sets/$setId/approve?approver=GFLCAPPR"
 
                         Write-Host "Calling CES API: $nextUrl"
                         Invoke-WebRequest -Uri $nextUrl `
