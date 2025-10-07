@@ -23,17 +23,16 @@ stages:
       runOnce:
        deploy:
           steps:
-
           - task: azure-deveops-ispw-operation-task@2
-            displayName: Build Code
+            displayName: Promote
             inputs:
-              connectionId: $(CES_URL)
+              connectionId: $(hostConnection)
               operationType: 'CES'
               cesUrl: $(cesUrl)
               cesSecretToken: $(CES_TOKEN)
               action: 'PromoteAssignment'
               request: |
-                runtimeConfiguration=$(CP_RUNTIME)
+                runtimeConfiguration=$(runtimeConfig)
                 assignmentId=${ parameters.AssignmentID }
                 application=GITFLOWC
                 level=FEAT
