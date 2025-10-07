@@ -7,8 +7,6 @@ parameters:
 
 variables:
 - group: 'GITFLOW_GFLC'
-- name: apiToken
-  value: $(apiToken)  # Reference to a secret variable
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -33,7 +31,7 @@ stages:
               action: 'PromoteAssignment'
               request: |
                 runtimeConfiguration=$(runtimeConfig)
-                assignmentId=${ parameters.AssignmentID }
+                assignmentId=${{ parameters.AssignmentID }}
                 application=GITFLOWC
                 level=FEAT
               skipWaitingForSetCompletion: false
