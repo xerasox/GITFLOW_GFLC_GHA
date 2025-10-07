@@ -23,28 +23,22 @@ stages:
       runOnce:
        deploy:
           steps:
-           - task: PowerShell@2
-             displayName: 'Call CES API'
-             inputs:
-              targetType: 'inline'
-              script: |
-                        $headers = @{
-                            "Authorization" = "$(CES_TOKEN)"
-                            "Content-Type" = "application/json"
-                        }
 
-                        $body = @{
-                            "runtimeConfiguration" = "$(CP_RUNTIME)"
-                        } | ConvertTo-Json -Depth 10
-
-                        $url = "$(CES_URL)/ispw/$(CP_RUNTIME)/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
-
-                        Write-Host "Calling CES API: $url"
-                        Invoke-WebRequest -Uri $url `
-                                          -Method POST `
-                                          -Headers $headers `
-                                          -Body $body `
-                                          -ContentType "application/json"
+          - task: azure-deveops-ispw-operation-task@2
+            displayName: Build Code
+            inputs:
+              connectionId: $(CES_URL)
+              operationType: 'CES'
+              cesUrl: $(cesUrl)
+              cesSecretToken: $(CES_TOKEN)
+              action: 'PromoteAssignment'
+              request: |
+                runtimeConfiguration=$(CP_RUNTIME)
+                assignmentId=${ parameters.AssignmentID }
+                application=GITFLOWC
+                level=FEAT
+              skipWaitingForSetCompletion: false
+              showResponseBodyInConsole: true
 
 - stage: QA
   displayName: 'Deploy to QA'
