@@ -106,11 +106,11 @@ stages:
                         $url = "$(cesUrl)/ispw/$(runtimeConfig)/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=PREP"
 
                         Write-Host "Calling CES API: $url"
-                        Invoke-WebRequest -Uri $url `
-                                          -Method POST `
-                                          -Headers $headers `
-                                          -Body $body `
-                                          -ContentType "application/json"
+                        $response = Invoke-WebRequest -Uri $url `
+                                                      -Method POST `
+                                                      -Headers $headers `
+                                                      -Body $body `
+                                                      -ContentType "application/json"
 
                         # Extract JSON from RawContent
                         $jsonText = $response.RawContent -replace 'HTTP/1.1 200 OK.*?\r?\n\r?\n', ''
