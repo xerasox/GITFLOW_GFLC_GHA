@@ -9,7 +9,7 @@ variables:
 - group: 'GITFLOW_GFLC'
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: 'Default'
 
 stages:
 - stage: Dev
