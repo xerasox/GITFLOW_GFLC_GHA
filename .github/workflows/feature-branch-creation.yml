@@ -34,7 +34,7 @@ jobs:
       - name: SonarQube Analysis
         shell: pwsh
         run: |
-          & "${{ vars.SONAR_PATH }}/sonar-scanner.bat" `
+          & "${{ vars.SONAR_PATH }}/sonar-scanner.bat" -X `
             "-Dsonar.projectKey=${{ vars.SONAR_PROJECT }}" `
             "-Dsonar.host.url=${{ vars.SONAR_URL }}" `
             "-Dsonar.token=${{ secrets.SONAR_TOKEN }} " `
