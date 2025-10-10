@@ -34,7 +34,7 @@ jobs:
       - name: SonarQube Analysis
         shell: pwsh
         run: |
-        
+              $env:SONAR_SCANNER_PROVISIONING_ENABLE = "false"
               $scannerPath = "C:/Users/xeraso/SonarCLI/bin/sonar-scanner.bat"
               $args = @(
                 "-X",
