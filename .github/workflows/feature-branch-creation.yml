@@ -34,6 +34,7 @@ jobs:
       - name: SonarQube Analysis
         shell: pwsh
         run: |
+              $branch = git rev-parse --abbrev-ref HEAD
               $env:SONAR_SCANNER_PROVISIONING_ENABLE = "false"
               $scannerPath = "${{ vars.SONAR_PATH }}/sonar-scanner.bat"
               $args = @(
