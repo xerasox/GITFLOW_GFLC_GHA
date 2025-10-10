@@ -35,7 +35,7 @@ jobs:
         shell: pwsh
         run: |
               $env:SONAR_SCANNER_PROVISIONING_ENABLE = "false"
-              $scannerPath = "C:/Users/xeraso/SonarCLI/bin/sonar-scanner.bat"
+              $scannerPath = "${{ vars.SONAR_PATH }}/sonar-scanner.bat"
               $args = @(
                 "-X",
                 "-Dsonar.projectKey=${{ vars.SONAR_PROJECT }}",
