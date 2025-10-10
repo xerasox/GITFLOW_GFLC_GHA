@@ -48,7 +48,8 @@ jobs:
                 "-Dsonar.sources=${{ vars.CC_SOURCES }}",
                 "-Dsonar.cobol.file.suffixes=cbl,testsuite,testscenario,context,stub",
                 "-Dsonar.cobol.copy.suffixes=cpy",
-                "-Dsonar.sourceEncoding=UTF-8"
+                "-Dsonar.sourceEncoding=UTF-8",
+                "-Dsonar.scanner.provisioning.enable=false"
               )
 
               & $scannerPath @args
