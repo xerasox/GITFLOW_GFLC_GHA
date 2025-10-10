@@ -54,6 +54,11 @@ jobs:
 
               & $scannerPath @args
 
+              
+              Write-Host "Executing:"
+              Write-Host "$scannerPath $($args -join ' ')"
+
+
       # $cmd = "${{ vars.SONAR_PATH }}/sonar-scanner.bat -X " +
       #   "-Dsonar.projectKey=${{ vars.SONAR_PROJECT }} " +         
       #   "-Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} " +
