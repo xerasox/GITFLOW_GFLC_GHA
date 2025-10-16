@@ -335,17 +335,41 @@ jobs:
         id: prepareBuild
         shell: pwsh
         run: |
-          $check = '${{ steps.checkbuild.outputs.BuildJSON }}'
-          if ($check -and $check -ne 'null' -and $check -ne '') {
-            Write-Host "Using checkbuild BuildJSON (length: $($check.Length))"
-            echo "SELECTED_BUILD_JSON=$check" >> $env:GITHUB_OUTPUT
+          # Try several possible sources for the build JSON in priority order
+          $check1 = '${{ steps.checkbuild.outputs.BuildJSON }}'
+          $check2 = '${{ steps.checkbuild2.outputs.BuildJSON }}'
+          $reSync = '${{ steps['re-sync'].outputs.automaticBuildJson }}'
+          $sync   = '${{ steps.sync.outputs.automaticBuildJson }}'
+
+          Write-Host "Lengths: check1=$($check1.Length) check2=$($check2.Length) reSync=$($reSync.Length) sync=$($sync.Length)"
+
+          if ($check1 -and $check1 -ne 'null' -and $check1 -ne '') {
+            $selected = $check1
+            Write-Host "Selected: checkbuild"
+          } elseif ($check2 -and $check2 -ne 'null' -and $check2 -ne '') {
+            $selected = $check2
+            Write-Host "Selected: checkbuild2"
+          } elseif ($reSync -and $reSync -ne 'null' -and $reSync -ne '') {
+            $selected = $reSync
+            Write-Host "Selected: re-sync"
           } else {
-            $sync = '${{ steps.sync.outputs.automaticBuildJson }}'
-            Write-Host "Using sync automaticBuildJson (length: $($sync.Length))"
-            echo "SELECTED_BUILD_JSON=$sync" >> $env:GITHUB_OUTPUT
+            if (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf) {
+              Write-Host "automaticBuildParams.txt found in workspace, reading file"
+              $selected = Get-Content .\automaticBuildParams.txt -Raw
+              Write-Host "Selected: file"
+            } else {
+              $selected = $sync
+              Write-Host "Selected: sync"
+            }
           }
 
+          # Export multiline-safe to GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "SELECTED_BUILD_JSON<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $selected
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
+
       - name: Build
+        if: ${{ steps.prepareBuild.outputs.SELECTED_BUILD_JSON != '' }}
         uses: bmc-compuware/ispw-build@v1
         id: build
         with:
@@ -536,6 +560,7 @@ jobs:
           }
  
       - name: Build
+        if: ${{ steps.prepareBuild.outputs.SELECTED_BUILD_JSON != '' }}
         uses: bmc-compuware/ispw-build@v1
         id: build
         with:
