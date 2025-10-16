@@ -39,8 +39,6 @@ jobs:
             "-Dsonar.host.url=${{ vars.SONAR_URL }}" `
             "-Dsonar.token=${{ secrets.SONAR_TOKEN }} " `
             "-Dsonar.tests=${{ vars.SONAR_TESTS }}" `
-            "-Dsonar.testExecutionReportPaths=${{ vars.SONAR_TESTEXEC_REPORT }}" `
-            "-Dsonar.coverageReportPaths=${{ vars.SONAR_CC_REPORT }}" `
             "-Dsonar.sources=${{ vars.CC_SOURCES }}" `
             "-Dsonar.cobol.file.suffixes=cbl,testsuite,testscenario,context,stub" `
             "-Dsonar.cobol.copy.suffixes=cpy" `
