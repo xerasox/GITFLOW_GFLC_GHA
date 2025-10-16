@@ -31,12 +31,12 @@ jobs:
    needs: Feature-branch-event
    runs-on: [ISPW]
    outputs:
-      ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID}}
-      ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY}}
-      $LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
-      $ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
+    ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}
+    ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY }}
+    LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
+    ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
    env:
-      Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
+    Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
    steps:
       # Checkout the repository first 
       - name: Checkout repository
@@ -111,6 +111,10 @@ jobs:
 
                 echo "ASSIGNMENT_ID=$assignmentId" >> $env:GITHUB_OUTPUT
                 echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
+                # expose raw build json for downstream steps (multiline safe)
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildJSON<<EOF"
+                Add-Content -Path $env:GITHUB_OUTPUT -Value $fileContent
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
 
             }    
       
@@ -201,6 +205,10 @@ jobs:
 
                 echo "ASSIGNMENT_ID=$assignmentId" >> $env:GITHUB_OUTPUT
                 echo "ISSUE_KEY=$issueKey" >> $env:GITHUB_OUTPUT
+                # expose raw build json for downstream steps (multiline safe)
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "BuildJSON<<EOF"
+                Add-Content -Path $env:GITHUB_OUTPUT -Value $fileContent
+                Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
 
             }    
 
@@ -322,7 +330,21 @@ jobs:
                   -Body $body `
                   -ContentType 'application/json'
 
-      # Build
+      # Build (prefer checkbuild BuildJSON, else sync automaticBuildJson)
+      - name: Prepare build JSON
+        id: prepareBuild
+        shell: pwsh
+        run: |
+          $check = '${{ steps.checkbuild.outputs.BuildJSON }}'
+          if ($check -and $check -ne 'null' -and $check -ne '') {
+            Write-Host "Using checkbuild BuildJSON (length: $($check.Length))"
+            echo "SELECTED_BUILD_JSON=$check" >> $env:GITHUB_OUTPUT
+          } else {
+            $sync = '${{ steps.sync.outputs.automaticBuildJson }}'
+            Write-Host "Using sync automaticBuildJson (length: $($sync.Length))"
+            echo "SELECTED_BUILD_JSON=$sync" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Build
         uses: bmc-compuware/ispw-build@v1
         id: build
@@ -331,14 +353,15 @@ jobs:
           ces_token: ${{ secrets.CES_TOKEN }}
           srid: 'ispw'
           runtime_configuration: ${{ vars.CP_RUNTIME }}
-          build_automatically: ${{ steps.sync.outputs.automaticBuildJson }}
+          # selected build JSON prepared in prior step
+          build_automatically: ${{ steps.prepareBuild.outputs.SELECTED_BUILD_JSON }}
 
       # Check for Failures
       - name: Get the number of build failures
         run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
 
 
-  Test :
+  Test:
       needs: Build
       runs-on: [ISPW]
       env:
@@ -389,7 +412,7 @@ jobs:
           reporter: java-junit
           fail-on-error: true
 
-  CodeCoverage :
+  CodeCoverage:
       needs: [Build,Test]
       runs-on: [ISPW]
       env:
@@ -412,7 +435,7 @@ jobs:
              --cc.test "${{ env.RUN_DATE }}" `
              --cc.sources "${{ vars.CC_SOURCES }}"     
 
-  SonarQube :
+  SonarQube:
       needs: CodeCoverage
       runs-on: [ISPW]
       steps:
@@ -507,9 +530,9 @@ jobs:
            Write-Host "##vso[task.setvariable variable=taskIds;isoutput=true]$taskParm"
            Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
            Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
-           echo "::set-output name=BuildJSON::$fileContent"
+           echo "BuildJSON=$fileContent" >> $env:GITHUB_OUTPUT
 
-           Write-Host $BuildJSON
+           Write-Host $fileContent
           }
  
       - name: Build
@@ -520,7 +543,7 @@ jobs:
           ces_token: ${{ secrets.CES_TOKEN }}
           srid: 'ispw'
           runtime_configuration: ${{ vars.CP_RUNTIME }}
-          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON }}
+          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON != '' && steps.checkbuild.outputs.BuildJSON || steps.sync.outputs.automaticBuildJson }}
           
       - name: Get the number of build failures
         run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
