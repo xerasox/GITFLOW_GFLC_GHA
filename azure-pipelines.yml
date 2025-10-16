@@ -120,13 +120,13 @@ stages:
 
                         Write-Host "Extracted setId: $setId"
 
-                        # Example: Use setId in another API call
-                        $nextUrl = "$(cesUrl)/ispw/$(runtimeConfig)/sets/$setId/approve?approver=GFLCAPPR"
+                        # # Example: Use setId in another API call
+                        # $nextUrl = "$(cesUrl)/ispw/$(runtimeConfig)/sets/$setId/approve?approver=GFLCAPPR"
 
-                        Write-Host "Calling CES API: $nextUrl"
-                        Invoke-WebRequest -Uri $nextUrl `
-                                          -Method POST `
-                                          -Headers $headers `
-                                          -Body $body `
-                                          -ContentType "application/json"
+                        # Write-Host "Calling CES API: $nextUrl"
+                        # Invoke-WebRequest -Uri $nextUrl `
+                        #                   -Method POST `
+                        #                   -Headers $headers `
+                        #                   -Body $body `
+                        #                   -ContentType "application/json"
 
