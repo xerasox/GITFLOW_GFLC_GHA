@@ -21,37 +21,28 @@ stages:
       runOnce:
        deploy:
           steps:
-          - task: Bash@3
-            displayName: 'Call CES API (macOS via curl)'
-            inputs:
+           - task: PowerShell@2
+             displayName: 'Call CES API'
+             inputs:
               targetType: 'inline'
               script: |
-                set -euo pipefail
+                        $headers = @{
+                            "Authorization" = "$(CES_TOKEN)"
+                            "Content-Type" = "application/json"
+                        }
 
-                url="${cesUrl}/ispw/${runtimeConfig}/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
+                        $body = @{
+                            "runtimeConfiguration" = "$(runtimeConfig)"
+                        } | ConvertTo-Json -Depth 10
 
-                echo "Calling CES API: ${url}"
+                        $url = "$(cesUrl)/ispw/$(runtimeConfig)/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
 
-                # Build JSON body safely. Use a here-doc to avoid escaping issues.
-                read -r -d '' body <<'JSON'
-                {
-                  "runtimeConfiguration": "__RUNTIME_CONFIG__"
-                }
-                JSON
-
-                # Inject runtime value into JSON body
-                body="${body/__RUNTIME_CONFIG__/${runtimeConfig}}"
-
-                # Optional: show body for debugging (do not print tokens)
-                echo "Request body: ${body}"
-
-                # Perform POST request
-                curl -sS -X POST \
-                  -H "Authorization: ${CES_TOKEN}" \
-                  -H "Content-Type: application/json" \
-                  --data "${body}" \
-                  "${url}" \
-                  -w "\nHTTP %{http_code}\n"
+                        Write-Host "Calling CES API: $url"
+                        Invoke-WebRequest -Uri $url `
+                                          -Method POST `
+                                          -Headers $headers `
+                                          -Body $body `
+                                          -ContentType "application/json"
 
 - stage: PREP
   displayName: 'Deploy to PREP'
