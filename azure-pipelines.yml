@@ -21,28 +21,42 @@ stages:
       runOnce:
        deploy:
           steps:
-           - task: PowerShell@2
-             displayName: 'Call CES API'
-             inputs:
+          - task: Bash@3
+            displayName: 'Call CES API (macOS via curl)'
+            inputs:
               targetType: 'inline'
               script: |
-                        $headers = @{
-                            "Authorization" = "$(CES_TOKEN)"
-                            "Content-Type" = "application/json"
-                        }
+                set -euo pipefail
 
-                        $body = @{
-                            "runtimeConfiguration" = "$(runtimeConfig)"
-                        } | ConvertTo-Json -Depth 10
+                # Ensure required variables are present
+                : "${CES_TOKEN:?CES_TOKEN is required}"
+                : "${runtimeConfig:?runtimeConfig is required}"
+                : "${cesUrl:?cesUrl is required}"
 
-                        $url = "$(cesUrl)/ispw/$(runtimeConfig)/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
+                url="${cesUrl}/ispw/${runtimeConfig}/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
 
-                        Write-Host "Calling CES API: $url"
-                        Invoke-WebRequest -Uri $url `
-                                          -Method POST `
-                                          -Headers $headers `
-                                          -Body $body `
-                                          -ContentType "application/json"
+                echo "Calling CES API: ${url}"
+
+                # Build JSON body safely. Use a here-doc to avoid escaping issues.
+                read -r -d '' body <<'JSON'
+                {
+                  "runtimeConfiguration": "__RUNTIME_CONFIG__"
+                }
+                JSON
+
+                # Inject runtime value into JSON body
+                body="${body/__RUNTIME_CONFIG__/${runtimeConfig}}"
+
+                # Optional: show body for debugging (do not print tokens)
+                echo "Request body: ${body}"
+
+                # Perform POST request
+                curl -sS -X POST \
+                  -H "Authorization: ${CES_TOKEN}" \
+                  -H "Content-Type: application/json" \
+                  --data "${body}" \
+                  "${url}" \
+                  -w "\nHTTP %{http_code}\n"
 
 - stage: PREP
   displayName: 'Deploy to PREP'
