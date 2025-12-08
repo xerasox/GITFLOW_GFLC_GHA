@@ -28,11 +28,6 @@ stages:
               script: |
                 set -euo pipefail
 
-                # Ensure required variables are present
-                : "${CES_TOKEN:?CES_TOKEN is required}"
-                : "${runtimeConfig:?runtimeConfig is required}"
-                : "${cesUrl:?cesUrl is required}"
-
                 url="${cesUrl}/ispw/${runtimeConfig}/assignments/${{ parameters.AssignmentID }}/tasks/promote?level=FEAT"
 
                 echo "Calling CES API: ${url}"
