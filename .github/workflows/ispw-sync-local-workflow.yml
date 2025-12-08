@@ -221,9 +221,9 @@ jobs:
           $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  
           $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
           
-          try {
-          # Send the GET request to Jira API
-          $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}' `
+            try {
+            # Send the GET request to Jira API
+            $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY || steps.checkbuild2.outputs.ISSUE_KEY }}' `
               -Method GET `
               -Headers @{
                   'Accept' = 'application/json'
@@ -264,15 +264,15 @@ jobs:
               $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
               $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
       
-              # Prepare the request body in JSON format
-              $body = @{
+                # Prepare the request body in JSON format
+                $body = @{
                   fields = @{
-                      customfield_10054 = @("${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}")
+                    customfield_10054 = @("${{ steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild2.outputs.ASSIGNMENT_ID }}")
                   }
-              } | ConvertTo-Json -Depth 3
+                } | ConvertTo-Json -Depth 3
       
               # Send the PUT request to Jira API
-              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}' `
+              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY || steps.checkbuild2.outputs.ISSUE_KEY }}' `
                   -Method PUT `
                   -Headers @{
                       'Accept' = 'application/json'
@@ -302,13 +302,13 @@ jobs:
                                 if ("${{vars.LANGUAGE}}" -eq "EN") {
                                     @{
                                         type = "text"
-                                        text = "Code Pipeline Information : The assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} has been created for this feature."
+                                        text = "Code Pipeline Information : The assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild2.outputs.ASSIGNMENT_ID }} has been created for this feature."
                                     }
                                 }
                                 else {
                                     @{
                                         type = "text"
-                                        text = "Information Code Pipeline : L'assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }} a été créé pour cette user story."
+                                        text = "Information Code Pipeline : L'assignment ${{ steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild2.outputs.ASSIGNMENT_ID }} a été créé pour cette user story."
                                     }
                                 }
                              )
@@ -320,8 +320,8 @@ jobs:
               # Display the JSON body for debugging purposes
               Write-Host "Request body: $body"
 
-              # Send the POST request to Jira API
-              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY }}/comment' `
+                # Send the POST request to Jira API
+                $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild.outputs.ISSUE_KEY || steps.checkbuild2.outputs.ISSUE_KEY }}/comment' `
                   -Method POST `
                   -Headers @{
                       'Accept' = 'application/json'
