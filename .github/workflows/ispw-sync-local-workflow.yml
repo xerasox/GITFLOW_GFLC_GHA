@@ -70,7 +70,7 @@ jobs:
           containerCreation: 'per-branch'
           showEnv: true
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
-          ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+          ispwConfigPath: ${{ vars.CP_CONFIG }}
 
       # Build Parameters retrieve
       - name: Get Automatic build parameters
@@ -160,7 +160,7 @@ jobs:
           containerCreation: 'per-branch'
           showEnv: true
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
-          ispwConfigPath: 'GenApp_MainframeCore\ispwconfig.yml'
+          ispwConfigPath: ${{ vars.CP_CONFIG }}
           gitCommit : ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
           gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
 
