@@ -5,7 +5,7 @@
        01  STAR-LINE-1.
            05 FILLER                  PIC X(20).
            05 FILLER                  PIC X(90) VALUE ALL '*'.
-       01  FLASH-LINE.
+       01  FLUSH-LINE.
            05 FILLER                  PIC X(20).
            05 FILLER                  PIC X(5) VALUE ALL '*'.
            05 FILLER                  PIC X(37).
