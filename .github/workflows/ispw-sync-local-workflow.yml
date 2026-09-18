@@ -234,12 +234,12 @@ jobs:
           # Parse the response and extract the subset using ConvertFrom-Json
           $json = $response.Content | ConvertFrom-Json
           
-          # Check if customfield_10054 exists and is not null
-          if ($json.fields.PSObject.Properties["customfield_10054"]) {
-              $assignment = $json.fields.customfield_10054
+          # Check if customfield_10041 exists and is not null
+          if ($json.fields.PSObject.Properties["customfield_10041"]) {
+              $assignment = $json.fields.customfield_10041
               Write-Host "Extracted subset: $assignment"
           } else {
-              Write-Host "customfield_10054 is not present or is null."
+              Write-Host "customfield_10041 is not present or is null."
               $assignment = "NOTFOUND"
           }
           
@@ -267,7 +267,7 @@ jobs:
                 # Prepare the request body in JSON format
                 $body = @{
                   fields = @{
-                    customfield_10054 = @("${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}")
+                    customfield_10041 = @("${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}")
                   }
                 } | ConvertTo-Json -Depth 3
       
