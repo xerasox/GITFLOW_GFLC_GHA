@@ -234,12 +234,12 @@ jobs:
           # Parse the response and extract the subset using ConvertFrom-Json
           $json = $response.Content | ConvertFrom-Json
           
-          # Check if customfield_10041 exists and is not null
-          if ($json.fields.PSObject.Properties["customfield_10041"]) {
-              $assignment = $json.fields.customfield_10041
-              Write-Host "Extracted subset: $assignment"
+          # Check if customfield_10041 exists and is not null/empty
+          if ($json.fields.PSObject.Properties.Name -contains 'customfield_10041' -and -not [string]::IsNullOrWhiteSpace([string]$json.fields.customfield_10041)) {
+              $assignment = [string]$json.fields.customfield_10041
+              Write-Host "Extracted custom field value: $assignment"
           } else {
-              Write-Host "customfield_10041 is not present or is null."
+              Write-Host "customfield_10041 is not present, empty, or null."
               $assignment = "NOTFOUND"
           }
           
@@ -257,17 +257,18 @@ jobs:
       
       # Set Assignment ID in the issue
       - name: Set Issue Assignment ID
-        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' }}
+        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
         shell: pwsh
         run: |
               $User = "${{ vars.JIRA_USER }}"
               $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
               $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+              $assignmentId = "${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}"
       
                 # Prepare the request body in JSON format
                 $body = @{
                   fields = @{
-                    customfield_10041 = @("${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}")
+                    customfield_10041 = $assignmentId
                   }
                 } | ConvertTo-Json -Depth 3
       
@@ -283,7 +284,7 @@ jobs:
 
       # Create associated comment
       - name: Update Issue Comment
-        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' }}
+        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
         shell: pwsh
         run: |
               $User = "${{ vars.JIRA_USER }}"
