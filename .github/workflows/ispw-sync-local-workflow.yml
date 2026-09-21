@@ -327,12 +327,14 @@ jobs:
           # Prefer assignment coming from earlier build steps if present
           $preAssign = '${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}'
           if ($preAssign -and $preAssign -ne 'null' -and $preAssign -ne '') {
-            Write-Host "Assignment already available from build steps: $preAssign. Skipping Jira GET."
+            Write-Host "Assignment available from build steps: $preAssign. Will ensure Jira is updated."
             Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$preAssign"
-            exit 0
+            Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT_SOURCE=build"
+            $assignment = $preAssign
+          } else {
+            $assignment = "NOTFOUND"
+            Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT_SOURCE=none"
           }
-
-          $assignment = "NOTFOUND"
           # Derive issue key directly from the branch name to avoid detached HEAD problems
           $branchName = '${{ github.ref_name }}'
           $issueKey = ($branchName -split '/') | Select-Object -Last 1
@@ -363,7 +365,8 @@ jobs:
               $json = $response.Content | ConvertFrom-Json
               if ($json.fields.PSObject.Properties.Name -contains 'customfield_10041' -and -not [string]::IsNullOrWhiteSpace([string]$json.fields.customfield_10041)) {
                 $assignment = [string]$json.fields.customfield_10041
-                Write-Host "Extracted custom field value: $assignment"
+                Write-Host "Extracted custom field value from Jira: $assignment"
+                Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT_SOURCE=jira"
               } else {
                 Write-Host "customfield_10041 missing or empty in Jira response; using NOTFOUND"
               }
@@ -394,8 +397,16 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ISSUE_KEY=$issue"
       
       # Set Assignment ID in the issue
+      - name: Debug assignment variables
+        shell: pwsh
+        run: |
+          Write-Host "DEBUG: ASSIGNMENT=$env:ASSIGNMENT"
+          Write-Host "DEBUG: ASSIGNMENT_SOURCE=$env:ASSIGNMENT_SOURCE"
+          Write-Host "DEBUG: checkbuild.ASSIGNMENT_ID='${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}'"
+          Write-Host "DEBUG: checkbuild2.ASSIGNMENT_ID='${{ steps.checkbuild2.outputs.ASSIGNMENT_ID }}'"
+
       - name: Set Issue Assignment ID
-        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
+        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' || env.ASSIGNMENT_SOURCE == 'build' }}
         shell: pwsh
         run: |
               $User = "${{ vars.JIRA_USER }}"
