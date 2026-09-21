@@ -196,8 +196,8 @@ jobs:
                 Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
                 Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
 
-                # Get the active branch name
-                $branchName = git rev-parse --abbrev-ref HEAD
+                # Get the active branch name from workflow context
+                $branchName = '${{ github.ref_name }}'
 
                 # Split by '/' and get the last part
                 $issueKey = $branchName -split '/' | Select-Object -Last 1
@@ -299,8 +299,8 @@ jobs:
                 Write-Host "##vso[task.setvariable variable=taskLevel;isoutput=true]$taskLevel"
                 Write-Host "##vso[task.setvariable variable=assignmentId;isoutput=true]$assignmentId"
 
-                # Get the active branch name
-                $branchName = git rev-parse --abbrev-ref HEAD
+                # Get the active branch name from workflow context
+                $branchName = '${{ github.ref_name }}'
 
                 # Split by '/' and get the last part
                 $issueKey = $branchName -split '/' | Select-Object -Last 1
@@ -323,7 +323,9 @@ jobs:
           $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
 
           $assignment = "NOTFOUND"
-          $issueKey = '${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}'
+          # Derive issue key directly from the branch name to avoid detached HEAD problems
+          $branchName = '${{ github.ref_name }}'
+          $issueKey = ($branchName -split '/') | Select-Object -Last 1
 
           if (-not $issueKey -or $issueKey -eq 'null' -or $issueKey -eq '') {
             Write-Host "No issue key available; setting ASSIGNMENT=NOTFOUND"
