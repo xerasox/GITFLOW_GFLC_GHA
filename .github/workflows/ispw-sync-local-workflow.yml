@@ -324,6 +324,14 @@ jobs:
           $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"
           $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
 
+          # Prefer assignment coming from earlier build steps if present
+          $preAssign = '${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}'
+          if ($preAssign -and $preAssign -ne 'null' -and $preAssign -ne '') {
+            Write-Host "Assignment already available from build steps: $preAssign. Skipping Jira GET."
+            Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$preAssign"
+            exit 0
+          }
+
           $assignment = "NOTFOUND"
           # Derive issue key directly from the branch name to avoid detached HEAD problems
           $branchName = '${{ github.ref_name }}'
