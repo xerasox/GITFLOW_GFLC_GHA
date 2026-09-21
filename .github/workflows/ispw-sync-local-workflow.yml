@@ -132,6 +132,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: automaticBuildParams.txt
           if-no-files-found: ignore
+          overwrite: true
 
       
 
@@ -265,6 +266,7 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: automaticBuildParams.txt
           if-no-files-found: ignore
+          overwrite: true
 
       # Build Parameters retrieve
       - name: Get Automatic build parameters
