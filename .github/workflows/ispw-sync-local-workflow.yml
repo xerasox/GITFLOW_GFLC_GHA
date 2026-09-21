@@ -420,7 +420,7 @@ jobs:
               }
 
       # Create associated comment
-        - name: Update Issue Comment
+      - name: Update Issue Comment
         if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
         shell: pwsh
         run: |
