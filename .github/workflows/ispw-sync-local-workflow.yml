@@ -12,6 +12,14 @@ on:
         options:
           - Yes
           - No
+      reuse_sync:
+        description: 'Reuse previously generated sync JSON without running sync'
+        required: false
+        default: 'No'
+        type: choice
+        options:
+          - Yes
+          - No
 permissions:
     checks: write
     contents: read
@@ -50,8 +58,33 @@ jobs:
           echo "Active commit on develop: $ACTIVE_COMMIT"
           echo "ACTIVE_COMMIT=$active_commit" >> $env:GITHUB_OUTPUT
 
-      # ISPW Sync
+      # Restore cached automaticBuildParams.txt (persist JSON between runs)
+      - name: Restore automaticBuildParams cache
+        uses: actions/cache@v4
+        with:
+          path: automaticBuildParams.txt
+          key: ispw-automaticBuildParams-${{ github.ref }}-stable
+
+      # Optionally reuse cached automaticBuildJson instead of running sync
+      - name: Use cached automaticBuildJson
+        id: sync
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reuse_sync == 'Yes' }}
+        shell: pwsh
+        run: |
+          if (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf) {
+            $json = Get-Content .\automaticBuildParams.txt -Raw
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "automaticBuildJson<<EOF"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $json
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
+            Write-Host "Reused cached automaticBuildParams.txt as automaticBuildJson"
+          } else {
+            Write-Host "No cached automaticBuildParams.txt found; cannot reuse sync"
+            exit 1
+          }
+
+      # ISPW Sync (run when not reusing cached JSON)
       - name: Run local action
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.reuse_sync != 'Yes' }}
         uses: bmc-compuware/ispw-sync-local@main
         id: sync
         with:
@@ -71,6 +104,8 @@ jobs:
           showEnv: true
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
           ispwConfigPath: ${{ vars.CP_CONFIG }}
+
+      
 
       # Build Parameters retrieve
       - name: Get Automatic build parameters
