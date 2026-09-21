@@ -39,8 +39,8 @@ jobs:
     needs: Feature-branch-event
     runs-on: [ISPW]
     outputs:
-      ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild2.outputs.ASSIGNMENT_ID }}
-      ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY || steps.checkbuild2.outputs.ISSUE_KEY }}
+      ASSIGNMENT_ID: ${{ steps.set_job_outputs.outputs.ASSIGNMENT_ID }}
+      ISSUE_KEY: ${{ steps.set_job_outputs.outputs.ISSUE_KEY }}
       LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
       ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
     env:
@@ -532,6 +532,26 @@ jobs:
           runtime_configuration: ${{ vars.CP_RUNTIME }}
           # selected build JSON prepared in prior step
           build_automatically: ${{ steps.prepareBuild.outputs.SELECTED_BUILD_JSON }}
+
+      - name: Set job outputs
+        id: set_job_outputs
+        shell: pwsh
+        run: |
+          # Determine assignment id from available sources
+          $a = '${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}'
+          if (-not $a -or $a -eq 'null' -or $a -eq '') { $a = '${{ steps.checkbuild2.outputs.ASSIGNMENT_ID }}' }
+          if (-not $a -or $a -eq 'null' -or $a -eq '') { $a = '${{ env.ASSIGNMENT }}' }
+          if ($a -eq 'null') { $a = '' }
+          Write-Host "Final ASSIGNMENT_ID: $a"
+          echo "ASSIGNMENT_ID=$a" >> $env:GITHUB_OUTPUT
+
+          # Determine issue key from available sources
+          $i = '${{ steps.checkbuild.outputs.ISSUE_KEY }}'
+          if (-not $i -or $i -eq 'null' -or $i -eq '') { $i = '${{ steps.checkbuild2.outputs.ISSUE_KEY }}' }
+          if (-not $i -or $i -eq 'null' -or $i -eq '') { $i = '${{ env.ISSUE_KEY }}' }
+          if ($i -eq 'null') { $i = '' }
+          Write-Host "Final ISSUE_KEY: $i"
+          echo "ISSUE_KEY=$i" >> $env:GITHUB_OUTPUT
 
       # Check for Failures
       - name: Get the number of build failures
