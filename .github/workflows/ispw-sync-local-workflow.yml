@@ -38,11 +38,11 @@ jobs:
   Build:
    needs: Feature-branch-event
    runs-on: [ISPW]
-   outputs:
-    ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID }}
-    ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY }}
-    LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
-    ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
+  outputs:
+   ASSIGNMENT_ID: ${{ steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild2.outputs.ASSIGNMENT_ID }}
+   ISSUE_KEY: ${{ steps.checkbuild.outputs.ISSUE_KEY || steps.checkbuild2.outputs.ISSUE_KEY }}
+   LAST_COMMIT: ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
+   ACTIVE_COMMIT: ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
    env:
     Win_Topaz_Location: ${{ vars.CLI_LOCATION }}
    steps:
