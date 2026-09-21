@@ -364,6 +364,22 @@ jobs:
 
           # Save result to environment and continue
           Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
+
+      # Resolve final ISSUE_KEY for Jira actions (prefer step outputs, else derive from branch)
+      - name: Resolve ISSUE_KEY
+        id: resolve_issue
+        shell: pwsh
+        run: |
+          $issueFromSteps = '${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}'
+          if (-not $issueFromSteps -or $issueFromSteps -eq 'null' -or $issueFromSteps -eq '') {
+            $branch = '${{ github.ref_name }}'
+            $issue = ($branch -split '/') | Select-Object -Last 1
+            Write-Host "Derived ISSUE_KEY from branch: $issue"
+          } else {
+            $issue = $issueFromSteps
+            Write-Host "Using ISSUE_KEY from step outputs: $issue"
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "ISSUE_KEY=$issue"
       
       # Set Assignment ID in the issue
       - name: Set Issue Assignment ID
@@ -374,72 +390,94 @@ jobs:
               $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
               $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
               $assignmentId = "${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }}"
-      
+              $issueKey = '${{ env.ISSUE_KEY }}'
+
+              if (-not $issueKey -or $issueKey -eq 'null' -or $issueKey -eq '') {
+                Write-Host "No ISSUE_KEY available; skipping Jira assignment PUT"
+                exit 0
+              }
+
                 # Prepare the request body in JSON format
                 $body = @{
                   fields = @{
                     customfield_10041 = $assignmentId
                   }
                 } | ConvertTo-Json -Depth 3
-      
+
               # Send the PUT request to Jira API
-              $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}' `
-                  -Method PUT `
-                  -Headers @{
-                      'Accept' = 'application/json'
-                      'Authorization' = "Basic $EncodedAuth"
-                  } `
-                  -Body $body `
-                  -ContentType 'application/json'
+              try {
+                $response = Invoke-WebRequest -Uri "${{ vars.JIRA_URL }}/rest/api/3/issue/$issueKey" `
+                    -Method PUT `
+                    -Headers @{
+                        'Accept' = 'application/json'
+                        'Authorization' = "Basic $EncodedAuth"
+                    } `
+                    -Body $body `
+                    -ContentType 'application/json' `
+                    -ErrorAction Stop
+              } catch {
+                Write-Host "Warning: Jira PUT failed for issue $issueKey: $($_.Exception.Message)"
+              }
 
       # Create associated comment
-      - name: Update Issue Comment
+        - name: Update Issue Comment
         if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
         shell: pwsh
         run: |
-              $User = "${{ vars.JIRA_USER }}"
-              $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
-              $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
-      
-              # Prepare the request body in JSON format
-              $body = @{
-                  body = @{
-                      type = "doc"
-                      version = 1
-                      content = @(
-                          @{
-                              type = "paragraph"
-                              content = @(
-                                if ("${{vars.LANGUAGE}}" -eq "EN") {
-                                    @{
-                                        type = "text"
-                                        text = "Code Pipeline Information : The assignment ${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }} has been created for this feature."
-                                    }
-                                }
-                                else {
-                                    @{
-                                        type = "text"
-                                        text = "Information Code Pipeline : L'assignment ${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }} a été créé pour cette user story."
-                                    }
-                                }
-                             )
-                          }
-                      )
+            $User = "${{ vars.JIRA_USER }}"
+            $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  # Replace with your actual API token
+            $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
+
+            $issueKey = '${{ env.ISSUE_KEY }}'
+            if (-not $issueKey -or $issueKey -eq 'null' -or $issueKey -eq '') {
+            Write-Host "No ISSUE_KEY available; skipping Jira comment POST"
+            exit 0
+            }
+
+            # Prepare the request body in JSON format
+            $body = @{
+              body = @{
+                type = "doc"
+                version = 1
+                content = @(
+                  @{
+                    type = "paragraph"
+                    content = @(
+                    if ("${{vars.LANGUAGE}}" -eq "EN") {
+                      @{
+                        type = "text"
+                        text = "Code Pipeline Information : The assignment ${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }} has been created for this feature."
+                      }
+                    }
+                    else {
+                      @{
+                        type = "text"
+                        text = "Information Code Pipeline : L'assignment ${{ steps.checkbuild2.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID }} a été créé pour cette user story."
+                      }
+                    }
+                   )
                   }
-              } | ConvertTo-Json -Depth 5 -Compress
+                )
+              }
+            } | ConvertTo-Json -Depth 5 -Compress
 
-              # Display the JSON body for debugging purposes
-              Write-Host "Request body: $body"
+            # Display the JSON body for debugging purposes
+            Write-Host "Request body: $body"
 
-                # Send the POST request to Jira API
-                $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}/comment' `
-                  -Method POST `
-                  -Headers @{
-                      'Accept' = 'application/json'
-                      'Authorization' = "Basic $EncodedAuth"
-                  } `
-                  -Body $body `
-                  -ContentType 'application/json'
+            # Send the POST request to Jira API
+            try {
+              $response = Invoke-WebRequest -Uri "${{ vars.JIRA_URL }}/rest/api/3/issue/$issueKey/comment" `
+              -Method POST `
+              -Headers @{
+                'Accept' = 'application/json'
+                'Authorization' = "Basic $EncodedAuth"
+              } `
+              -Body $body `
+              -ContentType 'application/json' `
+              -ErrorAction Stop
+            } catch {
+              Write-Host "Warning: Jira POST comment failed for issue $issueKey: $($_.Exception.Message)"
+            }
 
       # Build (prefer checkbuild BuildJSON, else sync automaticBuildJson)
       - name: Prepare build JSON
