@@ -67,7 +67,7 @@ jobs:
 
       # Optionally reuse cached automaticBuildJson instead of running sync
       - name: Use cached automaticBuildJson
-        id: sync
+        id: sync_cached
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reuse_sync == 'Yes' }}
         shell: pwsh
         run: |
@@ -111,7 +111,7 @@ jobs:
       - name: Get Automatic build parameters
         id: parms
         run:  |
-          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson }}"
+          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}"
 
       # Check Build Parameters
       - name: Check Build Parms
@@ -204,7 +204,7 @@ jobs:
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }}
         id: parms2
         run:  |
-          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson }}"
+          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}"
 
       # Check Build Parameters
       - name: Check Build Parms
@@ -375,7 +375,7 @@ jobs:
           $check1 = '${{ steps.checkbuild.outputs.BuildJSON }}'
           $check2 = '${{ steps.checkbuild2.outputs.BuildJSON }}'
           $reSync = '${{ steps['re-sync'].outputs.automaticBuildJson }}'
-          $sync   = '${{ steps.sync.outputs.automaticBuildJson }}'
+          $sync   = '${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}'
 
           Write-Host "Lengths: check1=$($check1.Length) check2=$($check2.Length) reSync=$($reSync.Length) sync=$($sync.Length)"
 
@@ -604,7 +604,7 @@ jobs:
           ces_token: ${{ secrets.CES_TOKEN }}
           srid: 'ispw'
           runtime_configuration: ${{ vars.CP_RUNTIME }}
-          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON != '' && steps.checkbuild.outputs.BuildJSON || steps.sync.outputs.automaticBuildJson }}
+          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON != '' && steps.checkbuild.outputs.BuildJSON || steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}
           
       - name: Get the number of build failures
         run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
