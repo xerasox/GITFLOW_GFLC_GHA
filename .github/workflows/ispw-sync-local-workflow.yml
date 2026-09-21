@@ -49,6 +49,17 @@ jobs:
       # Checkout the repository first 
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      # Compute filesystem-safe artifact name (replace / with -)
+      - name: Compute artifact name
+        id: set-artifact-name
+        shell: pwsh
+        run: |
+          $ref = '${{ github.ref_name }}'
+          $safe = $ref -replace '/','-'
+          $name = "automaticBuildParams-$safe"
+          Write-Host "Computed artifact name: $name"
+          Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=$name"
         
       # Get last commit hash from develop branch
       - name: Get active commit hash
@@ -70,7 +81,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reuse_sync == 'Yes' }}
         uses: actions/download-artifact@v4
         with:
-          name: automaticBuildParams-${{ github.ref_name }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: .
 
       # Optionally reuse cached automaticBuildJson instead of running sync
@@ -118,7 +129,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: automaticBuildParams-${{ github.ref_name }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: automaticBuildParams.txt
           if-no-files-found: ignore
 
@@ -251,7 +262,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: automaticBuildParams-${{ github.ref_name }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: automaticBuildParams.txt
           if-no-files-found: ignore
 
