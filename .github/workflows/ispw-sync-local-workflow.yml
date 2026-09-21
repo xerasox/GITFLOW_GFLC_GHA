@@ -444,7 +444,7 @@ jobs:
 
       # Create associated comment
       - name: Update Issue Comment
-        if: ${{ env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND' }}
+        if: ${{ env.ASSIGNMENT_SOURCE == 'build' || ((env.ASSIGNMENT == '' || env.ASSIGNMENT == 'null' || env.ASSIGNMENT == 'NOTFOUND') && (steps.checkbuild.outputs.ASSIGNMENT_ID == '' || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null') && (steps.checkbuild2.outputs.ASSIGNMENT_ID == '' || steps.checkbuild2.outputs.ASSIGNMENT_ID == 'null')) }}
         shell: pwsh
         run: |
             $User = "${{ vars.JIRA_USER }}"
