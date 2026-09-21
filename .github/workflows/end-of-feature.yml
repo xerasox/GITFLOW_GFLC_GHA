@@ -87,6 +87,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2a: Merge feature into develop and push
+      - name: Merge feature into develop
+        run: |
+          set -e
+          BRANCH_NAME="feature/${{ github.event.client_payload.issue_key }}"
+          echo "Merging $BRANCH_NAME into develop"
+
+          # Ensure we have remote data
+          git fetch origin --prune
+
+          # Checkout develop and update
+          git checkout develop
+          git pull origin develop
+
+          # Merge feature branch
+          if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
+            git merge --no-ff origin/$BRANCH_NAME -m "Merge $BRANCH_NAME into develop (automated)"
+
+            # Push develop
+            git push origin develop
+            echo "Merged and pushed develop"
+          else
+            echo "Remote branch $BRANCH_NAME does not exist; skipping merge."
+          fi
+
       # Step 2: Delete the branch locally and remotely
       - name: Delete the branch
         run: |
