@@ -65,6 +65,14 @@ jobs:
           path: automaticBuildParams.txt
           key: ispw-automaticBuildParams-${{ github.ref }}-stable
 
+      # Download persisted automaticBuildParams artifact when reusing sync
+      - name: Download automaticBuildParams artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reuse_sync == 'Yes' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: automaticBuildParams-${{ github.ref_name }}
+          path: .
+
       # Optionally reuse cached automaticBuildJson instead of running sync
       - name: Use cached automaticBuildJson
         id: sync_cached
@@ -105,13 +113,52 @@ jobs:
           assignmentPrefix: ${{ vars.CP_ASSIGNPREFIX }}
           ispwConfigPath: ${{ vars.CP_CONFIG }}
 
+      # Persist automaticBuildParams as artifact for future reuse
+      - name: Upload automaticBuildParams artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: automaticBuildParams-${{ github.ref_name }}
+          path: automaticBuildParams.txt
+          if-no-files-found: ignore
+
       
 
       # Build Parameters retrieve
       - name: Get Automatic build parameters
         id: parms
         run:  |
-          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}"
+          echo "automaticBuilJson=${{ steps.sync_final.outputs.automaticBuildJson }}"
+
+      # Consolidate automaticBuildJson: prefer live sync output, then cached output, then file
+      - name: Consolidate automaticBuildJson
+        id: sync_final
+        shell: pwsh
+        run: |
+          $syncOut = '${{ steps.sync.outputs.automaticBuildJson }}'
+          $cachedOut = '${{ steps.sync_cached.outputs.automaticBuildJson }}'
+          $fileOut = ''
+          if (Test-Path -Path .\automaticBuildParams.txt -PathType Leaf) {
+            $fileOut = Get-Content .\automaticBuildParams.txt -Raw
+          }
+
+          if ($syncOut -and $syncOut -ne 'null' -and $syncOut -ne '') {
+            $selected = $syncOut
+            Write-Host "Selected automaticBuildJson from live sync"
+          } elseif ($cachedOut -and $cachedOut -ne 'null' -and $cachedOut -ne '') {
+            $selected = $cachedOut
+            Write-Host "Selected automaticBuildJson from cached step"
+          } elseif ($fileOut -and $fileOut -ne '') {
+            $selected = $fileOut
+            Write-Host "Selected automaticBuildJson from file"
+          } else {
+            $selected = ''
+            Write-Host "No automaticBuildJson found from sync, cache, or file"
+          }
+
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "automaticBuildJson<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $selected
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
 
       # Check Build Parameters
       - name: Check Build Parms
@@ -199,12 +246,21 @@ jobs:
           gitCommit : ${{ steps.getActiveCommit.outputs.ACTIVE_COMMIT }}
           gitFromHash : ${{ steps.getLastCommit.outputs.LAST_COMMIT }}
 
+      # Persist automaticBuildParams from re-sync as artifact
+      - name: Upload automaticBuildParams artifact (re-sync)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: automaticBuildParams-${{ github.ref_name }}
+          path: automaticBuildParams.txt
+          if-no-files-found: ignore
+
       # Build Parameters retrieve
       - name: Get Automatic build parameters
         if: ${{ !steps.checkbuild.outputs.ASSIGNMENT_ID || steps.checkbuild.outputs.ASSIGNMENT_ID == 'null' }}
         id: parms2
         run:  |
-          echo "automaticBuilJson=${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}"
+          echo "automaticBuilJson=${{ steps.sync_final.outputs.automaticBuildJson }}"
 
       # Check Build Parameters
       - name: Check Build Parms
@@ -251,44 +307,52 @@ jobs:
       - name: Get Issue Info
         shell: pwsh
         run: |
-
           $User = "eraso.xavier@gmail.com"
-          $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"  
+          $Token = "${{ secrets.PERSONAL_JIRA_TOKEN }}"
           $EncodedAuth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${User}:${Token}"))
-          
+
+          $assignment = "NOTFOUND"
+          $issueKey = '${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}'
+
+          if (-not $issueKey -or $issueKey -eq 'null' -or $issueKey -eq '') {
+            Write-Host "No issue key available; setting ASSIGNMENT=NOTFOUND"
+            Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
+            exit 0
+          }
+
+          # Attempt request but never let an HTTP error abort the step
+          $response = $null
+          try {
+            $response = Invoke-WebRequest -Uri "${{ vars.JIRA_URL }}/rest/api/3/issue/$issueKey" `
+                        -Method GET `
+                        -Headers @{
+                          'Accept' = 'application/json'
+                          'Authorization' = "Basic $EncodedAuth"
+                        } `
+                        -ErrorAction Stop
+          } catch {
+            Write-Host "Warning: Jira GET failed: $($_.Exception.Message)"
+            $response = $null
+          }
+
+          if ($response -and $response.Content) {
             try {
-            # Send the GET request to Jira API
-            $response = Invoke-WebRequest -Uri '${{ vars.JIRA_URL }}/rest/api/3/issue/${{ steps.checkbuild2.outputs.ISSUE_KEY || steps.checkbuild.outputs.ISSUE_KEY }}' `
-              -Method GET `
-              -Headers @{
-                  'Accept' = 'application/json'
-                  'Authorization' = "Basic $EncodedAuth"
-              } `
-              -ErrorAction Stop  
-          
-          # Parse the response and extract the subset using ConvertFrom-Json
-          $json = $response.Content | ConvertFrom-Json
-          
-          # Check if customfield_10041 exists and is not null/empty
-          if ($json.fields.PSObject.Properties.Name -contains 'customfield_10041' -and -not [string]::IsNullOrWhiteSpace([string]$json.fields.customfield_10041)) {
-              $assignment = [string]$json.fields.customfield_10041
-              Write-Host "Extracted custom field value: $assignment"
+              $json = $response.Content | ConvertFrom-Json
+              if ($json.fields.PSObject.Properties.Name -contains 'customfield_10041' -and -not [string]::IsNullOrWhiteSpace([string]$json.fields.customfield_10041)) {
+                $assignment = [string]$json.fields.customfield_10041
+                Write-Host "Extracted custom field value: $assignment"
+              } else {
+                Write-Host "customfield_10041 missing or empty in Jira response; using NOTFOUND"
+              }
+            } catch {
+              Write-Host "Warning: could not parse Jira response as JSON; using NOTFOUND"
+            }
           } else {
-              Write-Host "customfield_10041 is not present, empty, or null."
-              $assignment = "NOTFOUND"
+            Write-Host "No Jira response content; setting ASSIGNMENT=NOTFOUND"
           }
-          
-          # Save the value to the GitHub Actions environment
+
+          # Save result to environment and continue
           Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
-          }
-          catch {
-              # Handle the case where the issue does not exist or there is an error
-              Write-Host "Error: Issue not found or unable to retrieve issue data. $($_.Exception.Message)"
-              
-              # Optionally, set a default value or handle accordingly
-              $assignment = "NOTFOUND"
-              Add-Content -Path $env:GITHUB_ENV -Value "ASSIGNMENT=$assignment"
-          }
       
       # Set Assignment ID in the issue
       - name: Set Issue Assignment ID
@@ -375,7 +439,7 @@ jobs:
           $check1 = '${{ steps.checkbuild.outputs.BuildJSON }}'
           $check2 = '${{ steps.checkbuild2.outputs.BuildJSON }}'
           $reSync = '${{ steps['re-sync'].outputs.automaticBuildJson }}'
-          $sync   = '${{ steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}'
+          $sync   = '${{ steps.sync_final.outputs.automaticBuildJson }}'
 
           Write-Host "Lengths: check1=$($check1.Length) check2=$($check2.Length) reSync=$($reSync.Length) sync=$($sync.Length)"
 
@@ -604,7 +668,7 @@ jobs:
           ces_token: ${{ secrets.CES_TOKEN }}
           srid: 'ispw'
           runtime_configuration: ${{ vars.CP_RUNTIME }}
-          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON != '' && steps.checkbuild.outputs.BuildJSON || steps.sync.outputs.automaticBuildJson || steps.sync_cached.outputs.automaticBuildJson }}
+          build_automatically: ${{ steps.checkbuild.outputs.BuildJSON != '' && steps.checkbuild.outputs.BuildJSON || steps.sync_final.outputs.automaticBuildJson }}
           
       - name: Get the number of build failures
         run: echo "The number of build failures is ${{ steps.build.outputs.generate_failed_count }}"
