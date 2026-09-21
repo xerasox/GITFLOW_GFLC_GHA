@@ -342,7 +342,7 @@ jobs:
                         } `
                         -ErrorAction Stop
           } catch {
-            Write-Host "Warning: Jira GET failed: $($_.Exception.Message)"
+            Write-Host ("Warning: Jira GET failed: {0}" -f $_.Exception.Message)
             $response = $null
           }
 
@@ -416,7 +416,7 @@ jobs:
                     -ContentType 'application/json' `
                     -ErrorAction Stop
               } catch {
-                Write-Host "Warning: Jira PUT failed for issue $issueKey: $($_.Exception.Message)"
+                Write-Host ("Warning: Jira PUT failed for issue {0}: {1}" -f $issueKey, $_.Exception.Message)
               }
 
       # Create associated comment
@@ -475,9 +475,9 @@ jobs:
               -Body $body `
               -ContentType 'application/json' `
               -ErrorAction Stop
-            } catch {
-              Write-Host "Warning: Jira POST comment failed for issue $issueKey: $($_.Exception.Message)"
-            }
+                } catch {
+                  Write-Host ("Warning: Jira POST comment failed for issue {0}: {1}" -f $issueKey, $_.Exception.Message)
+                }
 
       # Build (prefer checkbuild BuildJSON, else sync automaticBuildJson)
       - name: Prepare build JSON
