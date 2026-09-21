@@ -103,7 +103,19 @@ jobs:
 
           # Merge feature branch
           if git ls-remote --exit-code --heads origin $BRANCH_NAME; then
-            git merge --no-ff origin/$BRANCH_NAME -m "Merge $BRANCH_NAME into develop (automated)"
+            # Try a normal merge first; if it fails due to unrelated histories, retry with the flag
+            if git merge --no-ff origin/$BRANCH_NAME -m "Merge $BRANCH_NAME into develop (automated)"; then
+              echo "Merged normally"
+            else
+              echo "Normal merge failed; attempting merge with --allow-unrelated-histories"
+              if git merge --no-ff origin/$BRANCH_NAME --allow-unrelated-histories -m "Merge $BRANCH_NAME into develop (automated, allow-unrelated-histories)"; then
+                echo "Merged with --allow-unrelated-histories"
+              else
+                echo "Merge failed even with --allow-unrelated-histories. Aborting and exiting with error."
+                git merge --abort || true
+                exit 1
+              fi
+            fi
 
             # Push develop
             git push origin develop
