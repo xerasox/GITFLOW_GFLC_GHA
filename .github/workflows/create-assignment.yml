@@ -30,7 +30,7 @@ jobs:
               application      = "GITFLOWC"
               subAppl          = "GITFLOWC"
               defaultPath      = "UNIT"
-              description      = "$env:ISSUE_SUMMARY/$env:ISSUE_KEY"
+              description      = "$env:ISSUE_SUMMARY / $env:ISSUE_KEY"
               assignmentPrefix = "GFLC"
           } | ConvertTo-Json -Compress
 
