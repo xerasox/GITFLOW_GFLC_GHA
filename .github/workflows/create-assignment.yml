@@ -1,0 +1,70 @@
+name: Code Pipeline Create Assignment
+
+on:
+  repository_dispatch:
+    types: [create-assignment]
+
+jobs:
+  Create-Assignment:
+    runs-on: [ISPW]
+
+    steps:
+      - name: Create Assignment
+        id: post
+        shell: pwsh
+        env:
+          CES_URL: ${{ vars.CES_URL }}
+          CES_TOKEN: ${{ secrets.CES_TOKEN }}
+          CP_RUNTIME: ${{ vars.CP_RUNTIME }}
+          ISSUE_KEY: ${{ github.event.client_payload.issue_key }}
+          ISSUE_SUMMARY: ${{ github.event.client_payload.issue_summary }}
+        run: |
+          $headers = @{
+              "Authorization" = $env:CES_TOKEN
+              "Content-Type"  = "application/json"
+          }
+
+          # cp-to-jira-update.yml reads the Jira issue key as the last '/' segment of the description
+          $body = @{
+              stream           = "GITFLOW"
+              application      = "GITFLOWC"
+              subAppl          = "GITFLOWC"
+              defaultPath      = "UNIT"
+              description      = "$env:ISSUE_SUMMARY/$env:ISSUE_KEY"
+              assignmentPrefix = "GFLC"
+          } | ConvertTo-Json -Compress
+
+          # Display the JSON body for debugging purposes
+          Write-Host "Request body: $body"
+
+          $response = Invoke-RestMethod -Uri "$env:CES_URL/ispw/$env:CP_RUNTIME/assignments" `
+                                        -Method POST `
+                                        -Headers $headers `
+                                        -Body $body
+
+          Write-Host "Created assignment: $($response.assignmentId)"
+          echo "ASSIGNMENT_ID=$($response.assignmentId)" >> $env:GITHUB_OUTPUT
+
+      - name: Send Assignment to Jira
+        shell: pwsh
+        env:
+          JIRA_WEBHOOK_TOKEN: ${{ secrets.JIRA_WEBHOOK_TOKEN }}
+          ISSUE_KEY: ${{ github.event.client_payload.issue_key }}
+          ASSIGNMENT_ID: ${{ steps.post.outputs.ASSIGNMENT_ID }}
+        run: |
+          $headers = @{
+              "Content-Type"                = "application/json"
+              "X-Automation-Webhook-Token"  = $env:JIRA_WEBHOOK_TOKEN
+          }
+
+          $body = @{
+              issues     = @($env:ISSUE_KEY)
+              assignment = $env:ASSIGNMENT_ID
+          } | ConvertTo-Json -Compress
+
+          Write-Host "Request body: $body"
+
+          Invoke-RestMethod -Uri "https://api-private.atlassian.com/automation/webhooks/jira/a/95ed459f-85dd-4569-9142-0d1bfec1d210/01a2099e-5654-79b5-a76e-dc7437bdb69d" `
+                            -Method POST `
+                            -Headers $headers `
+                            -Body $body
