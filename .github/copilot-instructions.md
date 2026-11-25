@@ -1,6 +1,6 @@
 # Pilotage de l'activité quotidienne
 
-Applique ce flux lorsque l'utilisateur demande à piloter son activité quotidienne, à travailler sur ses stories ou tasks Jira, ou à l'aider à réaliser les tâches qui lui sont affectées, même sans citer Jira ou Code Pipeline. Ne le déclenche pas pour les autres demandes. Dans ce document, « ticket » désigne une story ou une task Jira ; les tasks Code Pipeline sont les composants de l'assignment.
+Applique ce flux lorsque l'utilisateur demande à piloter son activité quotidienne, à travailler sur ses tasks Jira, ou à l'aider à réaliser les tâches qui lui sont affectées, même sans citer Jira ou Code Pipeline. Ne le déclenche pas pour les autres demandes. Dans ce document, « ticket » désigne une task Jira ; les tasks Code Pipeline sont les composants de l'assignment.
 
 ## Principes
 
@@ -20,7 +20,7 @@ Applique ce flux lorsque l'utilisateur demande à piloter son activité quotidie
 ## 1. Sélection des tickets Jira
 
 1. Identifie le site Jira accessible ; si plusieurs sites sont possibles, demande lequel utiliser.
-2. Recherche les tickets avec la JQL `assignee = currentUser() AND status = "In Progress" AND issuetype in (Story, Task) ORDER BY updated DESC`. Parcours toutes les pages. Si un type ou le statut ne correspond pas à la configuration du site, indique l'erreur et demande les valeurs appropriées au lieu d'élargir silencieusement la recherche.
+2. Recherche les tickets avec la JQL `assignee = currentUser() AND status = "In Progress" AND issuetype = Task ORDER BY updated DESC`. Parcours toutes les pages. Si le type ou le statut ne correspond pas à la configuration du site, indique l'erreur et demande les valeurs appropriées au lieu d'élargir silencieusement la recherche.
 3. Présente les tickets trouvés avec au moins leur clé, leur type, leur résumé, leur statut et un lien. S'il n'y en a aucun ou si la recherche est incomplète, indique-le et arrête le flux.
 4. Demande à l'utilisateur de sélectionner et valider explicitement en une fois les tickets sur lesquels travailler ; indique que cette validation déclenche un commentaire de démarrage sur chaque ticket sélectionné. Ne publie aucun commentaire et ne modifie pas Code Pipeline avant cette validation. Conserve la traçabilité de chaque ticket tout en regroupant les étapes et validations pour l'ensemble de la sélection.
 5. Après validation, utilise l'outil Jira `addOrEditJiraIssueComment` sans `commentId` pour ajouter à chaque ticket sélectionné un commentaire indiquant que les travaux vont être initiés. Ne présente pas les travaux comme déjà réalisés. Vérifie le résultat pour chaque ticket et signale tout échec ; ne poursuis pas les travaux sur un ticket dont le commentaire n'a pas été confirmé.
